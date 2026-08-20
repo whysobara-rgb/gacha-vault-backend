@@ -50,6 +50,7 @@ async function bootstrap() {
     .addTag('inventory', '인벤토리(보관함)')
     .addTag('shipping-requests', '배송 신청')
     .addTag('wallet', '지갑(GP)/포인트 내역')
+    .addTag('rankings', '랭킹(유저/인기박스/실시간당첨)')
     .build();
   const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('docs', app, swaggerDocument);

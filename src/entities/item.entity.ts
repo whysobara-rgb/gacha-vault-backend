@@ -30,7 +30,7 @@ export class Item {
   @Column({ type: 'int', default: 0 })
   estimatedValue: number;
 
-  @Column({ type: 'varchar', length: 500, nullable: true })
+  @Column({ type: 'text', nullable: true })
   imageUrl: string;
 
   @OneToMany(() => GachaItem, (gachaItem) => gachaItem.item)

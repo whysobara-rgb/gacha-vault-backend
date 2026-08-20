@@ -167,6 +167,13 @@ export class DrawsService {
     });
   }
 
+  /** Returns the user's lifetime total draw count (for the profile screen). */
+  async getStats(userId: number) {
+    const drawRepo = this.dataSource.getRepository(Draw);
+    const totalDrawCount = await drawRepo.count({ where: { userId } });
+    return { totalDrawCount };
+  }
+
   private pickWeightedRandom(pool: GachaItem[]): GachaItem {
     const totalWeight = pool.reduce((sum, entry) => sum + entry.weight, 0);
     let roll = Math.random() * totalWeight;

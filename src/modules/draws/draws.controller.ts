@@ -1,4 +1,4 @@
-import { Body, Controller, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
@@ -21,5 +21,14 @@ export class DrawsController {
   })
   create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateDrawDto) {
     return this.drawsService.createDraw(user.userId, dto);
+  }
+
+  @Get('stats')
+  @ApiOperation({
+    summary: '내 뽑기 통계',
+    description: '누적 뽑기 횟수(totalDrawCount)를 반환합니다.',
+  })
+  getStats(@CurrentUser() user: AuthenticatedUser) {
+    return this.drawsService.getStats(user.userId);
   }
 }

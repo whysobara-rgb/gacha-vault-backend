@@ -576,8 +576,25 @@ async function run() {
   let seededAnyRankingDraws = false;
   for (let i = 0; i < leaderboardUsers.length; i++) {
     const user = leaderboardUsers[i];
-    const existingCount = await drawRepo.count({ where: { userId: user.id } });
-    if (existingCount > 0) continue; // already seeded previously
+
+    // 항상 최신 아이템 풀 기준으로 재시딩한다. (이전에 삭제된 구식/제네릭
+    // 플레이스홀더 아이템을 참조하는 이력이 남아있으면 /rankings/wins에
+    // "N 등급 가치 카드" 같은 깨진 데이터가 노출되므로, 기존 이력을 지우고
+    // 매번 새로 생성해 항상 실제 테마 아이템만 남도록 한다.)
+    const existingDraws = await drawRepo.find({ where: { userId: user.id } });
+    if (existingDraws.length > 0) {
+      const drawIds = existingDraws.map((d) => d.id);
+      await inventoryRepo
+        .createQueryBuilder()
+        .delete()
+        .where('drawId IN (:...ids)', { ids: drawIds })
+        .execute();
+      await drawRepo
+        .createQueryBuilder()
+        .delete()
+        .where('id IN (:...ids)', { ids: drawIds })
+        .execute();
+    }
 
     seededAnyRankingDraws = true;
     // Higher-ranked demo users get more draws (descending by index).

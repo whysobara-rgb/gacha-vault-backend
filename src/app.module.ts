@@ -8,6 +8,9 @@ import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { GachaModule } from './modules/gacha/gacha.module';
 import { DrawsModule } from './modules/draws/draws.module';
+import { InventoryModule } from './modules/inventory/inventory.module';
+import { ShippingModule } from './modules/shipping/shipping.module';
+import { WalletModule } from './modules/wallet/wallet.module';
 
 @Module({
   imports: [
@@ -20,6 +23,9 @@ import { DrawsModule } from './modules/draws/draws.module';
     UsersModule,
     GachaModule,
     DrawsModule,
+    InventoryModule,
+    ShippingModule,
+    WalletModule,
   ],
   controllers: [AppController],
   providers: [AppService],

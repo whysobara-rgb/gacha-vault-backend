@@ -4,3 +4,6 @@ export * from './item.entity';
 export * from './gacha-item.entity';
 export * from './draw.entity';
 export * from './inventory-item.entity';
+export * from './shipping-request.entity';
+export * from './shipping-request-item.entity';
+export * from './wallet-transaction.entity';

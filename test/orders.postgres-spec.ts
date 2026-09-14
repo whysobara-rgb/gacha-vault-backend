@@ -283,7 +283,9 @@ describe('GP orders against PostgreSQL', () => {
     const id = order.capsules[0].id;
     await expect(db.getRepository(Item).delete(prize.id)).rejects.toThrow();
     const results = await Promise.all(
-      Array.from({ length: 6 }, () => service.open(users[0].id, id)),
+      Array.from({ length: 6 }, () =>
+        service.open(users[0].id, id.toUpperCase()),
+      ),
     );
     expect(
       results.every((r) => r.inventoryItemId === results[0].inventoryItemId),

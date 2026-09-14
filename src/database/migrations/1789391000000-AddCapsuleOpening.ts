@@ -2,6 +2,9 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 export class AddCapsuleOpening1789391000000 implements MigrationInterface {
   async up(r: QueryRunner): Promise<void> {
     await r.query(
+      `CREATE TABLE order_prize_refs (order_id uuid NOT NULL REFERENCES capsule_orders(id) ON DELETE CASCADE, item_id integer NOT NULL REFERENCES items(id) ON DELETE RESTRICT, PRIMARY KEY (order_id, item_id))`,
+    );
+    await r.query(
       'ALTER TABLE items ADD "isPremium" boolean, ADD "conversionGP" integer CHECK ("conversionGP" >= 0)',
     );
     await r.query(

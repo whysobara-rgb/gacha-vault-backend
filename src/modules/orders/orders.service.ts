@@ -296,6 +296,7 @@ export class OrdersService {
       )
     )
       throw fail('개봉 요청이 올바르지 않습니다', 400);
+    capsuleId = capsuleId.toLowerCase();
     return this.database.transaction(async (manager) => {
       // Same user-first order as purchases; later refunds must share this order.
       const user = await manager

@@ -10,6 +10,8 @@ import {
   ShippingRequest,
   ShippingRequestItem,
   WalletTransaction,
+  CapsuleOrder,
+  OwnedCapsule,
 } from '../entities';
 
 const entities = [
@@ -22,6 +24,8 @@ const entities = [
   ShippingRequest,
   ShippingRequestItem,
   WalletTransaction,
+  CapsuleOrder,
+  OwnedCapsule,
 ];
 
 export const buildTypeOrmConfig = (

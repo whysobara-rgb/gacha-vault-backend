@@ -65,15 +65,22 @@ export class GachaService {
       );
     }
 
-    const [liveDrawCount, pool] = await Promise.all([
+    const [liveDrawCount, pool, orderCounts] = await Promise.all([
       this.drawRepository.count({ where: { gachaId: gacha.id } }),
       this.gachaItemRepository.find({
         where: { gachaId: gacha.id },
         relations: ['item'],
       }),
+      this.gachaRepository.manager.query(
+        'SELECT COALESCE(sum(quantity), 0) AS sold FROM capsule_orders WHERE gacha_id = $1',
+        [gacha.id],
+      ),
     ]);
 
-    const soldStock = Math.min(gacha.totalStock, liveDrawCount);
+    const soldStock = Math.min(
+      gacha.totalStock,
+      liveDrawCount + Number(orderCounts[0].sold),
+    );
 
     // Rarity rank drives lineup display order: rarest first, like TIF's
     // "LUCKY LINEUP" hero-first layout.

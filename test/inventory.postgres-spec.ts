@@ -72,8 +72,8 @@ describe('Inventory lock against PostgreSQL migrations', () => {
     if (database.isInitialized) await database.destroy();
   });
 
-  it('applies the four existing migrations and reruns without changes', async () => {
-    expect(await database.query('SELECT * FROM migrations')).toHaveLength(4);
+  it('applies all migrations and reruns without changes', async () => {
+    expect(await database.query('SELECT * FROM migrations')).toHaveLength(5);
     expect(await database.runMigrations()).toEqual([]);
   });
 

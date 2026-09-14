@@ -49,7 +49,7 @@ export class GachaService {
   }
 
   /**
-   * Gacha detail: real-time sold stock (soldStockBaseline + live draw count
+   * Gacha detail: real-time opened stock (live draw count
    * for this gacha) plus the actual drop-pool lineup (item name/rarity/
    * image/weight), so the Flutter "LUCKY LINEUP" section always reflects
    * exactly what can be won from *this* specific box — never a hardcoded
@@ -73,10 +73,7 @@ export class GachaService {
       }),
     ]);
 
-    const soldStock = Math.min(
-      gacha.totalStock,
-      gacha.soldStockBaseline + liveDrawCount,
-    );
+    const soldStock = Math.min(gacha.totalStock, liveDrawCount);
 
     // Rarity rank drives lineup display order: rarest first, like TIF's
     // "LUCKY LINEUP" hero-first layout.

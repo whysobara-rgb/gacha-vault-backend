@@ -38,7 +38,7 @@ export const buildTypeOrmConfig = (
   // NOTE: synchronize is controlled by NODE_ENV — see below.
   // In production (NODE_ENV=production) we rely on migrations instead of
   // auto-sync to avoid unintended/unsafe schema changes against live data.
-  synchronize: configService.get<string>('NODE_ENV') !== 'production',
+  synchronize: false,
   logging: false,
 });
 

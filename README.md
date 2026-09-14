@@ -1,3 +1,9 @@
+# 가치가차 백엔드
+
+NestJS + TypeORM + PostgreSQL. 출시 기반 보완 중이며 운영 결제 완성본이 아닙니다.
+
+[거래 기반 변경·API·검증·배포 주의사항](docs/TRANSACTION_FOUNDATION.ko.md)
+
 <p align="center">
   <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
 </p>

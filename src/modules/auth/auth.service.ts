@@ -105,62 +105,12 @@ export class AuthService {
     };
   }
 
-  /**
-   * Social login (Kakao/Google/Naver/Apple).
-   *
-   * Lookup order:
-   *   1. Match by (provider, providerId) - returning user of this provider.
-   *   2. Match by email - an existing EMAIL/other-provider account with the
-   *      same email is linked to this provider (common "same email, new
-   *      provider" case for demo/launch purposes).
-   *   3. No match - auto-provision a brand-new account for this provider.
-   *
-   * No password is ever required or checked for social accounts.
-   */
-  async socialLogin(dto: SocialLoginDto) {
-    let user = await this.userRepository.findOne({
-      where: { provider: dto.provider, providerId: dto.providerId },
-    });
-
-    if (!user) {
-      const existingByEmail = await this.userRepository.findOne({
-        where: { email: dto.email },
-      });
-
-      if (existingByEmail) {
-        existingByEmail.provider = dto.provider;
-        existingByEmail.providerId = dto.providerId;
-        user = await this.userRepository.save(existingByEmail);
-      } else {
-        const created = this.userRepository.create({
-          email: dto.email,
-          password: null,
-          nickname: dto.nickname?.trim() || `${dto.provider}유저${Math.floor(Math.random() * 100000)}`,
-          coinBalance: 0,
-          provider: dto.provider,
-          providerId: dto.providerId,
-        });
-        user = await this.userRepository.save(created);
-      }
-    }
-
-    const expiresIn = Number(
-      this.configService.get<string>('JWT_EXPIRES_IN') ?? 3600,
+  /** Retired: unverified provider IDs must never authenticate or link accounts. */
+  async socialLogin(_dto: SocialLoginDto): Promise<never> {
+    throw new BusinessException(
+      ResponseCode.FORBIDDEN,
+      '소셜 로그인은 제공자 인증 검증 연동 후 사용할 수 있습니다',
+      HttpStatus.GONE,
     );
-    const accessToken = await this.jwtService.signAsync(
-      { sub: user.id, email: user.email },
-      { expiresIn },
-    );
-
-    return {
-      accessToken,
-      expiresIn,
-      user: {
-        id: user.id,
-        email: user.email,
-        nickname: user.nickname,
-        provider: user.provider,
-      },
-    };
   }
 }

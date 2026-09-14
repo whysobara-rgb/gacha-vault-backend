@@ -1,6 +1,11 @@
 import { DataSource } from 'typeorm';
 import { OrdersService } from './orders.service';
-const dto = { gachaId: 1, quantity: 1, expectedUnitPrice: 100 };
+const dto = {
+  gachaId: 1,
+  quantity: 1,
+  expectedProbabilityVersion: 'a'.repeat(64),
+  expectedUnitPrice: 100,
+};
 const key = 'd4b608db-b251-4616-8017-c1eea6a9c1a1';
 
 describe('GP order rollout and input boundaries', () => {
@@ -55,6 +60,17 @@ describe('GP order rollout and input boundaries', () => {
     process.env.ENABLE_GP_ORDER_PREVIEW = 'true';
     delete process.env.ENABLE_LEGACY_TRANSACTIONS;
     await expect(service.purchase(1, '', dto)).rejects.toMatchObject({
+      status: 400,
+    });
+    expect(transaction).not.toHaveBeenCalled();
+  });
+  it('blocks production opening and malformed capsule identifiers before DB access', async () => {
+    process.env.NODE_ENV = 'production';
+    process.env.ENABLE_GP_ORDER_PREVIEW = 'true';
+    await expect(service.open(1, key)).rejects.toMatchObject({ status: 503 });
+    process.env.NODE_ENV = 'test';
+    delete process.env.ENABLE_LEGACY_TRANSACTIONS;
+    await expect(service.open(1, 'invalid')).rejects.toMatchObject({
       status: 400,
     });
     expect(transaction).not.toHaveBeenCalled();

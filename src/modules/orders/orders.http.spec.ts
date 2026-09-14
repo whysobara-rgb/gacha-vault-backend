@@ -16,6 +16,8 @@ describe('order HTTP boundary', () => {
   const purchase = jest.fn().mockResolvedValue({ orderId: 'test-order' });
   const listCapsules = jest.fn().mockResolvedValue({ items: [] });
   const findOne = jest.fn();
+  const open = jest.fn().mockResolvedValue({ inventoryItemId: 7 });
+  const openingResult = jest.fn().mockResolvedValue({ inventoryItemId: 7 });
   beforeAll(async () => {
     const module = await Test.createTestingModule({
       imports: [PassportModule],
@@ -29,7 +31,7 @@ describe('order HTTP boundary', () => {
         },
         {
           provide: OrdersService,
-          useValue: { purchase, listCapsules, findOne },
+          useValue: { purchase, listCapsules, findOne, open, openingResult },
         },
       ],
     }).compile();
@@ -55,6 +57,7 @@ describe('order HTTP boundary', () => {
       .send({
         gachaId: 1,
         quantity: 2,
+        expectedProbabilityVersion: 'a'.repeat(64),
         expectedUnitPrice: 100,
         userId: 99,
         total: 1,
@@ -63,6 +66,7 @@ describe('order HTTP boundary', () => {
     expect(purchase).toHaveBeenCalledWith(10, key, {
       gachaId: 1,
       quantity: 2,
+      expectedProbabilityVersion: 'a'.repeat(64),
       expectedUnitPrice: 100,
     });
   });
@@ -71,7 +75,12 @@ describe('order HTTP boundary', () => {
       await request(app.getHttpServer())
         .post('/orders/gp')
         .set('Authorization', `Bearer ${token}`)
-        .send({ gachaId: 1, quantity, expectedUnitPrice: 100 })
+        .send({
+          gachaId: 1,
+          quantity,
+          expectedProbabilityVersion: 'a'.repeat(64),
+          expectedUnitPrice: 100,
+        })
         .expect(400);
     }
     expect(purchase).not.toHaveBeenCalled();
@@ -93,5 +102,27 @@ describe('order HTTP boundary', () => {
       .set('Authorization', `Bearer ${token}`)
       .expect(400);
     expect(findOne).not.toHaveBeenCalled();
+  });
+  it('authenticates opening and result recovery and validates capsule UUIDs', async () => {
+    const id = 'd4b608db-b251-4616-8017-c1eea6a9c1a1';
+    await request(app.getHttpServer()).post(`/capsules/${id}/open`).expect(401);
+    await request(app.getHttpServer())
+      .get(`/capsules/${id}/result`)
+      .expect(401);
+    await request(app.getHttpServer())
+      .post('/capsules/no/open')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(400);
+    await request(app.getHttpServer())
+      .post(`/capsules/${id}/open`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ userId: 99 })
+      .expect(201);
+    await request(app.getHttpServer())
+      .get(`/capsules/${id}/result`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+    expect(open).toHaveBeenCalledWith(10, id);
+    expect(openingResult).toHaveBeenCalledWith(10, id);
   });
 });

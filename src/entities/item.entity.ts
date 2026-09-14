@@ -33,6 +33,12 @@ export class Item {
   @Column({ type: 'text', nullable: true })
   imageUrl: string;
 
+  @Column({ type: 'boolean', nullable: true })
+  isPremium: boolean | null;
+
+  @Column({ type: 'integer', nullable: true })
+  conversionGP: number | null;
+
   @OneToMany(() => GachaItem, (gachaItem) => gachaItem.item)
   gachaItems: GachaItem[];
 

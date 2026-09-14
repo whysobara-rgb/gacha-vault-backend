@@ -1,5 +1,7 @@
 # 주문과 미개봉 캡슐: 2단계 구현
 
+후속 업데이트: 구매 API에 `expectedProbabilityVersion`이 필수로 추가되었다. 최신 계약과 개봉 구현은 [CAPSULE_OPENING.ko.md](CAPSULE_OPENING.ko.md)를 따른다. 아래는 2단계 시점의 기록이다.
+
 ## 현재 범위
 
 GP 전용 상품의 구매를 서버에서 처리하고 미개봉 캡슐을 별도 보관한다. 구매 시 당첨 상품을 생성하지 않는다. 현금 결제·개봉·환불은 이 API에 포함하지 않는다.

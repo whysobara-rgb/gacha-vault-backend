@@ -5,6 +5,7 @@ import {
   Headers,
   Param,
   ParseUUIDPipe,
+  ParseIntPipe,
   Post,
   Query,
   UseGuards,
@@ -47,5 +48,23 @@ export class OrdersController {
     @Query() query: ListCapsulesDto,
   ) {
     return this.orders.listCapsules(user.userId, query);
+  }
+  @Get('gachas/:id/odds')
+  odds(@Param('id', ParseIntPipe) id: number) {
+    return this.orders.odds(id);
+  }
+  @Post('capsules/:id/open')
+  open(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+  ) {
+    return this.orders.open(user.userId, id);
+  }
+  @Get('capsules/:id/result')
+  result(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+  ) {
+    return this.orders.openingResult(user.userId, id);
   }
 }

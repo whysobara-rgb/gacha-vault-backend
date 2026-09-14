@@ -1,3 +1,4 @@
+import type { ProbabilitySnapshot } from '../modules/orders/probability';
 import {
   Column,
   CreateDateColumn,
@@ -9,6 +10,15 @@ import {
 @Entity('capsule_orders')
 @Unique(['userId', 'idempotencyKey'])
 export class CapsuleOrder {
+  @Column({ name: 'probability_snapshot', type: 'jsonb', nullable: true })
+  probabilitySnapshot: ProbabilitySnapshot | null;
+  @Column({
+    name: 'probability_version',
+    type: 'varchar',
+    length: 64,
+    nullable: true,
+  })
+  probabilityVersion: string | null;
   @PrimaryColumn('uuid') id: string;
   @Column({ name: 'user_id' }) userId: number;
   @Column('uuid', { name: 'idempotency_key' }) idempotencyKey: string;

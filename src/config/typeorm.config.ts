@@ -12,6 +12,7 @@ import {
   WalletTransaction,
   CapsuleOrder,
   OwnedCapsule,
+  CapsuleOpening,
 } from '../entities';
 
 const entities = [
@@ -26,6 +27,7 @@ const entities = [
   WalletTransaction,
   CapsuleOrder,
   OwnedCapsule,
+  CapsuleOpening,
 ];
 
 export const buildTypeOrmConfig = (

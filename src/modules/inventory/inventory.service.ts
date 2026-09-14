@@ -1,7 +1,7 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { InventoryItem, InventoryStatus } from '../../entities';
+import { In, Repository } from 'typeorm';
+import { CapsuleOpening, InventoryItem, InventoryStatus } from '../../entities';
 import { BusinessException } from '../../common/exceptions/business.exception';
 import { ResponseCode } from '../../common/constants/response-code.constant';
 import { ListInventoryQueryDto } from './dto/list-inventory.query.dto';
@@ -81,17 +81,34 @@ export class InventoryService {
       take: limit,
     });
 
-    const items = rows.map((row) => ({
-      inventoryItemId: row.id,
-      itemId: row.item.id,
-      name: row.item.name,
-      rarity: row.item.rarity,
-      estimatedValue: row.item.estimatedValue,
-      imageUrl: row.item.imageUrl,
-      status: row.status,
-      isLocked: row.isLocked,
-      acquiredAt: row.createdAt,
-    }));
+    const openings = rows.length
+      ? await this.inventoryRepository.manager
+          .getRepository(CapsuleOpening)
+          .findBy({
+            inventoryItemId: In(rows.map((row) => row.id)),
+          })
+      : [];
+    const snapshots = new Map(
+      openings.map((result) => [result.inventoryItemId, result.prize]),
+    );
+    const items = rows.map((row) => {
+      const snapshot = snapshots.get(row.id);
+      return {
+        inventoryItemId: row.id,
+        itemId: row.item.id,
+        name: snapshot ? snapshot.name : row.item.name,
+        rarity: snapshot ? snapshot.rarity : row.item.rarity,
+        estimatedValue: snapshot
+          ? snapshot.estimatedValue
+          : row.item.estimatedValue,
+        imageUrl: snapshot ? snapshot.imageUrl : row.item.imageUrl,
+        isPremium: snapshot ? snapshot.isPremium : null,
+        conversionGP: snapshot ? snapshot.conversionGP : null,
+        status: row.status,
+        isLocked: row.isLocked,
+        acquiredAt: row.createdAt,
+      };
+    });
 
     return { items, page, limit, totalCount };
   }

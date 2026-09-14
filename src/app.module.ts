@@ -13,6 +13,8 @@ import { ShippingModule } from './modules/shipping/shipping.module';
 import { WalletModule } from './modules/wallet/wallet.module';
 import { RankingsModule } from './modules/rankings/rankings.module';
 
+import { OrdersModule } from './modules/orders/orders.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -28,6 +30,7 @@ import { RankingsModule } from './modules/rankings/rankings.module';
     ShippingModule,
     WalletModule,
     RankingsModule,
+    OrdersModule,
   ],
   controllers: [AppController],
   providers: [AppService],

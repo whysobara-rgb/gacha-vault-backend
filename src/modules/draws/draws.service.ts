@@ -1,3 +1,4 @@
+import { assertLegacyTransactionsAllowed } from '../../common/policies/legacy-policy';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import {
@@ -32,6 +33,7 @@ export class DrawsService {
    *   6. Commit. Any failure at any step rolls back all writes.
    */
   async createDraw(userId: number, dto: CreateDrawDto) {
+    assertLegacyTransactionsAllowed();
     const count = dto.count ?? 1;
 
     return this.dataSource.transaction(async (manager) => {
@@ -148,9 +150,7 @@ export class DrawsService {
           type: WalletTransactionType.USE,
           amount: -totalCost,
           description:
-            count > 1
-              ? `${gacha.title} 뽑기 x${count}`
-              : `${gacha.title} 뽑기`,
+            count > 1 ? `${gacha.title} 뽑기 x${count}` : `${gacha.title} 뽑기`,
           balanceAfter: user.coinBalance,
         }),
       );

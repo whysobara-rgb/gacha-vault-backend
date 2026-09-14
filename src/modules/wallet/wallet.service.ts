@@ -1,6 +1,6 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
-import { User, WalletTransaction, WalletTransactionType } from '../../entities';
+import { User, WalletTransaction } from '../../entities';
 import { BusinessException } from '../../common/exceptions/business.exception';
 import { ResponseCode } from '../../common/constants/response-code.constant';
 import { ListPointHistoryQueryDto } from './dto/list-point-history.query.dto';
@@ -52,45 +52,12 @@ export class WalletService {
     return { items, page, limit, totalCount };
   }
 
-  /** Demo/test top-up: credits the user's balance and records the ledger entry. */
-  async topup(userId: number, dto: TopupDto) {
-    return this.dataSource.transaction(async (manager) => {
-      const userRepo = manager.getRepository(User);
-      const walletRepo = manager.getRepository(WalletTransaction);
-
-      const user = await userRepo
-        .createQueryBuilder('user')
-        .setLock('pessimistic_write')
-        .where('user.id = :userId', { userId })
-        .getOne();
-
-      if (!user) {
-        throw new BusinessException(
-          ResponseCode.NOT_FOUND,
-          'User not found',
-          HttpStatus.NOT_FOUND,
-        );
-      }
-
-      user.coinBalance = Number(user.coinBalance) + dto.amount;
-      await userRepo.save(user);
-
-      const tx = await walletRepo.save(
-        walletRepo.create({
-          userId: user.id,
-          type: WalletTransactionType.EARN,
-          amount: dto.amount,
-          description: 'GP 충전',
-          balanceAfter: user.coinBalance,
-        }),
-      );
-
-      return {
-        transactionId: tx.id,
-        amount: dto.amount,
-        balanceAfter: user.coinBalance,
-        createdAt: tx.createdAt,
-      };
-    });
+  /** GP is reward/conversion only. This route never credits a balance. */
+  async topup(_userId: number, _dto: TopupDto): Promise<never> {
+    throw new BusinessException(
+      ResponseCode.FORBIDDEN,
+      'GP는 별도로 충전할 수 없습니다',
+      HttpStatus.GONE,
+    );
   }
 }

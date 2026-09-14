@@ -32,7 +32,9 @@ Flutter 변경은 이 응답을 확인한 뒤 보관함을 재조회한다. 통�
 - npm ci --ignore-scripts 성공, 기존 lockfile 유지.
 - NestJS build 성공.
 - Jest 단위/HTTP 계약 검증 통과. 실제 JWT 인증, 타인 ID, boolean 검증, 잠금 반복 요청, 폐쇄된 인증/GP 경로 및 seed/거래 guard 검증 포함.
-- HTTP 테스트는 Nest 라우팅·JWT·ValidationPipe를 실행하지만 DB repository는 테스트 대역이다. PostgreSQL 행 잠금/동시성, 실제 DB 마이그레이션·통합 테스트 완료를 의미하지 않는다.
+- 기존 HTTP 테스트는 Nest 라우팅·JWT·ValidationPipe를 실행하지만 DB repository는 테스트 대역이다.
+- 별도 PostgreSQL 16 통합 테스트 5개를 CI에 추가했다. 기존 마이그레이션 4개 적용/재실행, 잠금·해제 영속화, 타인 소유권, 동시 동일 PUT, 경쟁 트랜잭션의 배송 상태 커밋 후 409 반환을 검증한다. 마지막 테스트는 pg_blocking_pids로 실제 잠금 대기를 확인한 뒤 상태를 커밋한다.
+- 통합 테스트는 애플리케이션 DB_*와 dotenv를 읽지 않고 전용 loopback 테스트 DB를 사용한다. 운영 데이터 복제·운영 마이그레이션·실제 배송 API의 원자성을 검증한 것은 아니다. CI 실행 결과는 PR에서 확인한다.
 - 기존 의존성 설치 중 class-validator와 @nestjs/mapped-types의 peer 범위 경고가 발생했다. 이번 기능 테스트와 빌드는 통과했으나 버전 정합성 정리는 별도 작업이다.
 - 실제 API 서버에 배포하거나 운영 DB를 변경하지 않았다.
 
@@ -56,3 +58,14 @@ Flutter 변경은 이 응답을 확인한 뒤 보관함을 재조회한다. 통�
 6. 상품 전환/복구: 일반/프리미엄 명시 필드와 획득 당시 스냅샷, GP 출처별 소비 배분, 기한·횟수 검증.
 
 연령 기준, 배송 요금, 일반/프리미엄 분류, 유한 재고형 확률의 구매/개봉 시점, 다날 테스트 계약을 확정해야 운영 거래를 활성화할 수 있다. 해당 내용을 추정해 배포하지 않는다.
+
+## PostgreSQL 통합 테스트 실행
+
+GitHub Actions의 `postgres` 작업이 PostgreSQL 16 서비스를 생성하고 실행한다.
+로컬 재현은 전용 DB `gacha_integration_test`, 사용자 `gacha_ci`, 암호 `local-ci-only`를 가진 임시 PostgreSQL을 127.0.0.1에 먼저 준비한 뒤 실행한다. 애플리케이션 DB 자격증명을 사용하지 않는다.
+
+```sh
+TEST_POSTGRES=true NODE_ENV=test npm run test:postgres
+```
+
+기본 포트는 5432이며 `TEST_POSTGRES_PORT`로 바꿀 수 있다. 스키마 자동 동기화와 전체 테이블 초기화는 사용하지 않는다. 테스트가 생성한 fixture만 삭제한다.

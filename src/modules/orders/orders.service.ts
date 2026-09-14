@@ -23,7 +23,7 @@ import { BusinessException } from '../../common/exceptions/business.exception';
 import { ResponseCode } from '../../common/constants/response-code.constant';
 import { CreateGpOrderDto, ListCapsulesDto } from './order.dto';
 
-const fail = (message: string, status = 409) =>
+const fail = (message: string, status = 409, reason?: string) =>
   new BusinessException(
     status === 404
       ? ResponseCode.NOT_FOUND
@@ -32,6 +32,7 @@ const fail = (message: string, status = 409) =>
         : ResponseCode.CONFLICT,
     message,
     status,
+    reason ? [reason] : [],
   );
 
 @Injectable()
@@ -114,10 +115,18 @@ export class OrdersService {
         gacha.price <= 0 ||
         gacha.price !== dto.expectedUnitPrice
       )
-        throw fail('가격이 변경되었습니다. 다시 확인해 주세요');
+        throw fail(
+          '가격이 변경되었습니다. 다시 확인해 주세요',
+          409,
+          'ORDER_REJECTED',
+        );
       const probability = await loadProbability(manager, gacha.id);
       if (probability.version !== dto.expectedProbabilityVersion)
-        throw fail('확률·상품 정보가 변경되었습니다. 다시 확인해 주세요');
+        throw fail(
+          '확률·상품 정보가 변경되었습니다. 다시 확인해 주세요',
+          409,
+          'ORDER_REJECTED',
+        );
       const total = gacha.price * dto.quantity;
       if (!Number.isSafeInteger(total) || total > 2147483647)
         throw fail('주문 금액 한도를 초과했습니다', 400);
@@ -133,7 +142,7 @@ export class OrdersService {
         BigInt(sold) + BigInt(legacySold) + BigInt(dto.quantity) >
           BigInt(gacha.totalStock)
       )
-        throw fail('남은 수량이 부족합니다');
+        throw fail('남은 수량이 부족합니다', 409, 'ORDER_REJECTED');
       const balance = BigInt(user.coinBalance);
       if (balance < BigInt(total))
         throw new BusinessException(

@@ -193,7 +193,7 @@ describe('GP orders against PostgreSQL', () => {
         ...request(),
         expectedUnitPrice: 1,
       }),
-    ).rejects.toMatchObject({ status: 409 });
+    ).rejects.toMatchObject({ status: 409, errors: ['ORDER_REJECTED'] });
     expect(await balance(users[0].id)).toBe('1000');
     expect(
       await db.getRepository(CapsuleOrder).countBy({ userId: users[0].id }),

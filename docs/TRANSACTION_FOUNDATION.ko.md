@@ -48,6 +48,8 @@ Flutter 변경은 이 응답을 확인한 뒤 보관함을 재조회한다. 통�
 
 ## 이어서 구현할 거래 구조
 
+후속 업데이트: 개발/테스트 전용 GP 주문·미개봉 캡슐 구현과 계약은 [GP_ORDERS.ko.md](GP_ORDERS.ko.md)에 기록했다. 아래 목록은 최초 점검 시점의 현황이다. 현재는 Order/OwnedCapsule 및 사용자별 요청 키 유일성까지 추가했고, 확률 버전·PG·환불·GP 출처 배분은 남아 있다.
+
 현 DB에는 Order/Payment/OwnedCapsule/Refund/Idempotency/확률 버전/GP 출처 소비배분 테이블이 없다. 관리자 모듈·다날 검증·OAuth 검증도 확인되지 않았다.
 
 1. 원주문·가격·확률 버전·상품 전환 GP 스냅샷 설계와 additive migration.

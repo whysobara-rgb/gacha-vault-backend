@@ -3,6 +3,8 @@ import { randomUUID } from 'crypto';
 import { DataSource, In } from 'typeorm';
 import { dataSourceOptions } from '../src/config/typeorm.config';
 import {
+  GachaItem,
+  Draw,
   CapsuleOrder,
   OwnedCapsule,
   User,
@@ -10,6 +12,7 @@ import {
   CurrencyType,
   WalletTransaction,
 } from '../src/entities';
+import { GachaService } from '../src/modules/gacha/gacha.service';
 import { OrdersService } from '../src/modules/orders/orders.service';
 
 const db = new DataSource({
@@ -55,14 +58,12 @@ describe('GP orders against PostgreSQL', () => {
         coinBalance: 1000,
       })),
     );
-    gacha = await db
-      .getRepository(Gacha)
-      .save({
-        title: 'GP test',
-        price: 100,
-        currency: CurrencyType.GP,
-        totalStock: 10,
-      });
+    gacha = await db.getRepository(Gacha).save({
+      title: 'GP test',
+      price: 100,
+      currency: CurrencyType.GP,
+      totalStock: 10,
+    });
   });
   afterEach(async () => {
     if (!db.isInitialized || !users) return;
@@ -105,6 +106,12 @@ describe('GP orders against PostgreSQL', () => {
       .findBy({ userId: users[0].id });
     expect(ledger).toHaveLength(1);
     expect(ledger[0].amount).toBe(-200);
+    const catalog = new GachaService(
+      db.getRepository(Gacha),
+      db.getRepository(GachaItem),
+      db.getRepository(Draw),
+    );
+    expect((await catalog.findOne(gacha.id)).soldStock).toBe(2);
   });
 
   it('returns the same receipt for six concurrent retries, even after a price change', async () => {

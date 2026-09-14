@@ -35,7 +35,7 @@ export class WalletService {
 
     const [rows, totalCount] = await walletRepo.findAndCount({
       where,
-      order: { createdAt: 'DESC' },
+      order: { createdAt: 'DESC', id: 'DESC' },
       skip: (page - 1) * limit,
       take: limit,
     });

@@ -161,7 +161,7 @@ export class ShippingService {
     const [rows, totalCount] = await shippingRepo.findAndCount({
       where: { userId },
       relations: ['items', 'items.inventoryItem', 'items.inventoryItem.item'],
-      order: { createdAt: 'DESC' },
+      order: { createdAt: 'DESC', id: 'DESC' },
       skip: (page - 1) * limit,
       take: limit,
     });

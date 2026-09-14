@@ -1,3 +1,4 @@
+import { RankingsService } from '../src/modules/rankings/rankings.service';
 import 'reflect-metadata';
 import { randomUUID } from 'crypto';
 import { DataSource, In } from 'typeorm';
@@ -118,6 +119,39 @@ describe('GP orders against PostgreSQL', () => {
     if (db.isInitialized) await db.destroy();
   });
 
+  it('ranks only confirmed openings and keeps original prize value after catalog edits', async () => {
+    const ranking = new RankingsService(db);
+    const order = await service.purchase(users[0].id, randomUUID(), request());
+    expect(
+      (await ranking.getUserRanking()).items.find(
+        (row) => row.userId === users[0].id,
+      ),
+    ).toBeUndefined();
+    const result = await service.open(users[0].id, order.capsules[0].id);
+    await service.open(users[0].id, order.capsules[0].id);
+    await db
+      .getRepository(Item)
+      .update(prize.id, { estimatedValue: 999999, name: 'edited-catalog' });
+    const leaders = await ranking.getUserRanking();
+    expect(leaders.source).toBe('CONFIRMED_CAPSULE_OPENINGS_V1');
+    expect(
+      leaders.items.find((row) => row.userId === users[0].id),
+    ).toMatchObject({ drawCount: 1, totalValue: 1000, nickname: 'o**' });
+    const popular = await ranking.getPopularGachas();
+    expect(popular.items.find((row) => row.gachaId === gacha.id)).toMatchObject(
+      { drawCount: 1, price: 100 },
+    );
+    const recent = await ranking.getRecentBigWins();
+    expect(
+      recent.items.find(
+        (row) => row.inventoryItemId === result.inventoryItemId,
+      ),
+    ).toMatchObject({
+      itemName: 'snapshot-prize',
+      estimatedValue: 1000,
+      gachaTitle: 'GP test',
+    });
+  });
   it('atomically records a paid order, one debit and separate unopened capsules', async () => {
     const result = await service.purchase(users[0].id, randomUUID(), request());
     expect(result).toMatchObject({

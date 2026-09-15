@@ -68,7 +68,9 @@ describe('multi-connection email recovery races', () => {
       'SELECT auth_version,"coinBalance" FROM users WHERE id=$1',
       [u.id],
     );
-    expect(stored).toEqual({ auth_version: 1, coinBalance: 500 });
+    expect(stored.auth_version).toBe(1);
+    // pg returns the bigint balance as text; compare its exact integer value.
+    expect(BigInt(stored.coinBalance)).toBe(BigInt(500));
   });
   it('leases one pending email to only one of two workers', async () => {
     const u = await user();

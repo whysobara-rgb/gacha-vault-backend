@@ -68,6 +68,24 @@ describe('multi-connection account/support races', () => {
     await expect(
       support.status(u, t.ticketId, { status: 'CLOSED', expectedVersion: 1 }),
     ).rejects.toMatchObject({ status: 409 });
+    const closed = await support.status(u, t.ticketId, {
+      status: 'CLOSED',
+      expectedVersion: 3,
+    });
+    expect(closed).toMatchObject({
+      ticketId: t.ticketId,
+      status: 'CLOSED',
+      version: 4,
+    });
+    const reopened = await support.status(u, t.ticketId, {
+      status: 'OPEN',
+      expectedVersion: closed.version,
+    });
+    expect(reopened).toMatchObject({
+      ticketId: t.ticketId,
+      status: 'OPEN',
+      version: 5,
+    });
   });
   it('allows only one current-password action after a session version changes', async () => {
     const u = await user();
@@ -97,6 +115,17 @@ describe('multi-connection account/support races', () => {
       ),
     );
     expect(results.filter((x) => x.status === 'fulfilled')).toHaveLength(1);
+    const accepted = results.find(
+      (x) => x.status === 'fulfilled',
+    ) as PromiseFulfilledResult<any>;
+    const cancelled = await accounts.cancelClosure(u, accepted.value.requestId);
+    expect(cancelled).toMatchObject({
+      requestId: accepted.value.requestId,
+      status: 'CANCELLED',
+    });
+    expect(await accounts.cancelClosure(u, accepted.value.requestId)).toEqual(
+      cancelled,
+    );
     expect(
       Number(
         (

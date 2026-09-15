@@ -38,7 +38,13 @@ describe('account security and support SQL lifecycle', () => {
       transaction: async (...args: any[]) =>
         db.transaction((tx) =>
           args[args.length - 1]({
-            query: async (s, p) => (await tx.query(s, p)).rows,
+            query: async (s, p) => {
+              const result = await tx.query(s, p);
+              // Match TypeORM's PostgreSQL raw UPDATE/DELETE result contract.
+              return /^\s*(UPDATE|DELETE)\b/i.test(s)
+                ? [result.rows, result.affectedRows]
+                : result.rows;
+            },
           }),
         ),
     } as unknown as DataSource;

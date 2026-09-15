@@ -235,7 +235,7 @@ export class SupportService {
         [messageId, id, actor.userId, role, key, sequence, body],
       );
       const [updated] = await m.query(
-        `UPDATE support_tickets SET last_sequence=$2,last_staff_sequence=CASE WHEN $3 THEN $2 ELSE last_staff_sequence END,status=$4,version=version+1,updated_at=clock_timestamp() WHERE id=$1 RETURNING *`,
+        `WITH changed AS (UPDATE support_tickets SET last_sequence=$2,last_staff_sequence=CASE WHEN $3 THEN $2 ELSE last_staff_sequence END,status=$4,version=version+1,updated_at=clock_timestamp() WHERE id=$1 RETURNING *) SELECT * FROM changed`,
         [id, sequence, staff, staff ? 'ANSWERED' : 'OPEN'],
       );
       await this.event(
@@ -272,7 +272,7 @@ export class SupportService {
       if (r.version !== dto.expectedVersion)
         throw fail('새 답변이 있습니다. 문의를 새로 확인해주세요', 409);
       const [updated] = await m.query(
-        'UPDATE support_tickets SET status=$2,version=version+1,updated_at=clock_timestamp() WHERE id=$1 RETURNING *',
+        'WITH changed AS (UPDATE support_tickets SET status=$2,version=version+1,updated_at=clock_timestamp() WHERE id=$1 RETURNING *) SELECT * FROM changed',
         [id, dto.status],
       );
       await this.event(

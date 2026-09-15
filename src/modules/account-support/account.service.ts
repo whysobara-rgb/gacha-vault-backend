@@ -175,7 +175,7 @@ export class AccountService {
       if (!r) throw fail('탈퇴 요청을 찾을 수 없습니다', 404);
       if (r.status === 'CANCELLED') return this.closureReceipt(r);
       const [updated] = await m.query(
-        "UPDATE account_closure_requests SET status='CANCELLED',cancelled_at=clock_timestamp() WHERE id=$1 RETURNING *",
+        "WITH changed AS (UPDATE account_closure_requests SET status='CANCELLED',cancelled_at=clock_timestamp() WHERE id=$1 RETURNING *) SELECT * FROM changed",
         [id],
       );
       await this.event(m, actor.userId, 'CLOSURE_CANCELLED');

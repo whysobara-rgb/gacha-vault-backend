@@ -41,7 +41,13 @@ describe('email verification and reset SQL lifecycle', () => {
       transaction: async (...args: any[]) =>
         db.transaction((tx) =>
           args.at(-1)({
-            query: async (sql, p) => (await tx.query(sql, p)).rows,
+            query: async (sql, p) => {
+              const result = await tx.query(sql, p);
+              // Match TypeORM's PostgreSQL raw UPDATE/DELETE result contract.
+              return /^\s*(UPDATE|DELETE)\b/i.test(sql)
+                ? [result.rows, result.affectedRows]
+                : result.rows;
+            },
           }),
         ),
     } as unknown as DataSource;

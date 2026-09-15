@@ -285,7 +285,7 @@ export class RecoveryService implements OnModuleInit, OnModuleDestroy {
         if (!j) return null;
         const lease = randomUUID();
         const [claimed] = await m.query(
-          "UPDATE auth_mail_jobs SET status='PROCESSING',attempts=attempts+1,lease_id=$2,lease_until=clock_timestamp()+interval '2 minutes' WHERE id=$1 RETURNING *",
+          "WITH claimed AS (UPDATE auth_mail_jobs SET status='PROCESSING',attempts=attempts+1,lease_id=$2,lease_until=clock_timestamp()+interval '2 minutes' WHERE id=$1 RETURNING *) SELECT * FROM claimed",
           [j.id, lease],
         );
         return claimed;

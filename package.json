@@ -7,6 +7,7 @@
   "license": "UNLICENSED",
   "scripts": {
     "build": "nest build",
+    "check:types": "tsc --noEmit --incremental false",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
@@ -23,6 +24,8 @@
     "migration:generate": "npm run typeorm -- migration:generate -d src/data-source.ts",
     "migration:create": "npm run typeorm -- migration:create",
     "migration:run": "npm run typeorm -- migration:run -d src/data-source.ts",
+    "migration:show:compiled": "node node_modules/typeorm/cli.js migration:show -d dist/data-source.js",
+    "migration:run:compiled": "node node_modules/typeorm/cli.js migration:run -d dist/data-source.js --transaction all",
     "migration:revert": "npm run typeorm -- migration:revert -d src/data-source.ts",
     "test:postgres": "jest --config ./test/jest-postgres.json --runInBand"
   },

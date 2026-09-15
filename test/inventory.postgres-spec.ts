@@ -4,6 +4,7 @@ import { DataSource } from 'typeorm';
 import { dataSourceOptions } from '../src/config/typeorm.config';
 import { InventoryItem, InventoryStatus, Item, User } from '../src/entities';
 import { InventoryService } from '../src/modules/inventory/inventory.service';
+import { AppService } from '../src/app.service';
 
 // Deliberately never read DB_* or dotenv: this suite can only use a dedicated
 // loopback test database, with credentials unrelated to application secrets.
@@ -75,6 +76,15 @@ describe('Inventory lock against PostgreSQL migrations', () => {
   it('applies all migrations and reruns without changes', async () => {
     expect(await database.query('SELECT * FROM migrations')).toHaveLength(9);
     expect(await database.runMigrations()).toEqual([]);
+  });
+
+  it('confirms readiness against the actual applied PostgreSQL migration names', async () => {
+    const result = await new AppService(database).getReadiness();
+    expect(result).toMatchObject({
+      status: 'ready',
+      database: 'connected',
+      schema: 'current',
+    });
   });
 
   it('persists explicit lock and unlock through real database reads', async () => {

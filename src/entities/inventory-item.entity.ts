@@ -13,6 +13,7 @@ import { Draw } from './draw.entity';
 
 export enum InventoryStatus {
   STORED = 'STORED',
+  CONVERTED = 'CONVERTED',
   SHIPPING_REQUESTED = 'SHIPPING_REQUESTED',
   SHIPPING = 'SHIPPING',
   DELIVERED = 'DELIVERED',
@@ -44,7 +45,7 @@ export class InventoryItem {
   @Column({ name: 'draw_id', nullable: true })
   drawId: number;
 
-  @Column({ type: 'enum', enum: InventoryStatus, default: InventoryStatus.STORED })
+  @Column({ type: 'varchar', length: 32, default: InventoryStatus.STORED })
   status: InventoryStatus;
 
   @Column({ type: 'boolean', default: false })

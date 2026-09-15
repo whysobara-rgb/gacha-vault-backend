@@ -8,6 +8,7 @@ import { ResponseTransformInterceptor } from './common/interceptors/response-tra
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  app.enableShutdownHooks();
 
   app.use(
     helmet({
@@ -22,7 +23,7 @@ async function bootstrap() {
     new ValidationPipe({
       whitelist: true,
       transform: true,
-      forbidNonWhitelisted: false,
+      forbidNonWhitelisted: true,
     }),
   );
 

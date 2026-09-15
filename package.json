@@ -7,13 +7,14 @@
   "license": "UNLICENSED",
   "scripts": {
     "build": "nest build",
+    "check:types": "tsc --noEmit --incremental false",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
-    "test": "jest",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
@@ -23,7 +24,11 @@
     "migration:generate": "npm run typeorm -- migration:generate -d src/data-source.ts",
     "migration:create": "npm run typeorm -- migration:create",
     "migration:run": "npm run typeorm -- migration:run -d src/data-source.ts",
-    "migration:revert": "npm run typeorm -- migration:revert -d src/data-source.ts"
+    "migration:show:compiled": "node node_modules/typeorm/cli.js migration:show -d dist/data-source.js",
+    "migration:run:compiled": "node node_modules/typeorm/cli.js migration:run -d dist/data-source.js --transaction all",
+    "migration:revert": "npm run typeorm -- migration:revert -d src/data-source.ts",
+    "test:postgres": "jest --config ./test/jest-postgres.json --runInBand",
+    "owner:access": "ts-node -r tsconfig-paths/register src/database/commands/owner-access.cli.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",
@@ -47,6 +52,7 @@
     "typeorm": "^0.3.31"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.3.14",
     "@nestjs/cli": "^10.0.0",
     "@nestjs/schematics": "^10.0.0",
     "@nestjs/testing": "^10.0.0",

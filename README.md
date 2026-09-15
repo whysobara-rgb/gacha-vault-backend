@@ -1,3 +1,9 @@
+# 가치가차 백엔드
+
+NestJS + TypeORM + PostgreSQL. 출시 기반 보완 중이며 운영 결제 완성본이 아닙니다.
+
+[거래 기반 변경·API·검증·배포 주의사항](docs/TRANSACTION_FOUNDATION.ko.md)
+
 <p align="center">
   <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
 </p>
@@ -97,3 +103,9 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 ## License
 
 Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+
+## 출시 1단계: GP 전환·복구
+
+`GP_CONVERSION_RELEASE.md`에 API·정책·마이그레이션·검증·서버 반영 상태를 기록했다. 서버 코드와 테스트가 추가되었지만 실제 Render 배포와 다중 연결 검수는 아직 완료하지 않았다. 전환 보호 설정을 운영 환경에서 우회해서 활성화하면 안 된다.
+
+Account recovery and email verification: see [ACCOUNT_RECOVERY_RELEASE.md](ACCOUNT_RECOVERY_RELEASE.md).

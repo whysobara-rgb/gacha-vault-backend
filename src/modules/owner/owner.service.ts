@@ -82,6 +82,7 @@ export class OwnerService {
         (SELECT count(*)::int FROM fulfillment_orders WHERE status='REQUESTED') AS "shipRequested",
         (SELECT count(*)::int FROM fulfillment_orders WHERE status='PREPARING') AS "shipPreparing",
         (SELECT count(*)::int FROM fulfillment_orders WHERE status IN('REQUESTED','PREPARING') AND created_at<now()-interval '48 hours') AS "shipOverdue",
+        (SELECT count(*)::int FROM owner_cases WHERE status<>'CLOSED') AS "openCases",
         (SELECT count(*)::int FROM support_tickets WHERE status='OPEN') AS "openTickets",
         (SELECT count(*)::int FROM support_tickets WHERE status='OPEN' AND updated_at<now()-interval '24 hours') AS "ticketOverdue",
         (SELECT count(*)::int FROM warehouse_skus WHERE on_hand-reserved<=reorder_point) AS "lowStock",

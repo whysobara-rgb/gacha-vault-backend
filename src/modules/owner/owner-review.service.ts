@@ -93,7 +93,7 @@ export class OwnerReviewService {
         [id],
       );
       const audit = await m.query(
-        `SELECT id,actor_id AS "actorId",target_type AS "targetType",target_id AS "targetId",event,detail,created_at AS "createdAt" FROM operations_events WHERE (target_type='CATALOG' AND target_id=$1) OR (target_type='FULFILLMENT' AND target_id=ANY($2::text[])) OR (target_type='OWNER' AND target_id=ANY($3::text[])) ORDER BY id DESC LIMIT 201`,
+        `SELECT id,actor_id AS "actorId",target_type AS "targetType",target_id AS "targetId",event,detail,created_at AS "createdAt" FROM operations_events WHERE (target_type='CATALOG' AND target_id=$1) OR (target_type IN('FULFILLMENT','WAREHOUSE') AND target_id=ANY($2::text[])) OR (target_type='OWNER' AND target_id=ANY($3::text[])) ORDER BY id DESC LIMIT 201`,
         [
           String(order.gachaId),
           shipments.map((x) => x.id),

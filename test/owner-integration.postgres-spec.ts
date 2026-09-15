@@ -56,6 +56,11 @@ describe('owner to customer HTTP integration over PostgreSQL', () => {
       ENABLE_GP_ORDER_PREVIEW: 'true',
       ENABLE_SHIPPING_PREVIEW: 'true',
       ENABLE_LEGACY_TRANSACTIONS: 'false',
+      REFUND_CALENDAR_JSON: JSON.stringify({
+        coverageStart: '2020-01-01',
+        coverageEnd: '2040-12-31',
+        holidays: [],
+      }),
       SHIPPING_RATE_TABLE_JSON: JSON.stringify([
         { id: 'test', label: 'Test only', prefixes: ['*'], feeGP: 100 },
       ]),

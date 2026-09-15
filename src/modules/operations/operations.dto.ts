@@ -27,6 +27,9 @@ export class OperationsEntryDto {
   @IsBoolean() shippingEnabled: boolean;
 }
 export class CatalogConfigDto {
+  @IsOptional()
+  @IsIn(['tech', 'home', 'luxury', 'fashion', 'food', 'other'])
+  category?: string;
   @IsString() @MinLength(2) @MaxLength(255) title: string;
   @IsString() @MaxLength(2000) description: string;
   @IsOptional() @IsString() @MaxLength(2000) imageUrl: string | null = null;

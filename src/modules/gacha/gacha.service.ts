@@ -32,6 +32,7 @@ export class GachaService {
       items: items.map((gacha) => ({
         id: gacha.id,
         title: gacha.title,
+        category: gacha.category,
         description: gacha.description,
         price: gacha.price,
         currency: gacha.currency,
@@ -102,6 +103,7 @@ export class GachaService {
     return {
       id: gacha.id,
       title: gacha.title,
+      category: gacha.category,
       description: gacha.description,
       price: gacha.price,
       currency: gacha.currency,

@@ -2,6 +2,7 @@ import { plain, fail } from '../account-support/account-support.policy';
 export { fail };
 export type CatalogConfig = {
   title: string;
+  category?: string;
   description: string;
   imageUrl: string | null;
   price: number;
@@ -31,7 +32,7 @@ export function integer(v: unknown, min: number, max = 2147483647) {
     throw fail('수량과 금액을 확인해주세요', 400);
   return v as number;
 }
-function image(v: unknown) {
+export function image(v: unknown) {
   if (v === null || v === '') return null;
   if (typeof v !== 'string' || v.length > 2000)
     throw fail('이미지 주소를 확인해주세요', 400);
@@ -52,6 +53,12 @@ export function catalogConfig(
     value.entries.length > 100
   )
     throw fail('구성 상품은 1~100개로 입력해주세요', 400);
+  if (
+    !['tech', 'home', 'luxury', 'fashion', 'food', 'other'].includes(
+      value.category ?? 'other',
+    )
+  )
+    throw fail('상품 카테고리를 확인해주세요', 400);
   if (!['STANDARD', 'EVENT'].includes(value.saleType))
     throw fail('판매 유형을 확인해주세요', 400);
   const entries = value.entries.map((e) => {
@@ -79,6 +86,7 @@ export function catalogConfig(
   });
   const r = {
     title: plain(value.title, 2, 255),
+    category: value.category ?? 'other',
     description: plain(value.description, 0, 2000, true),
     imageUrl: image(value.imageUrl),
     price: integer(value.price, 1, 10000000),

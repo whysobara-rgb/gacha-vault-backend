@@ -157,6 +157,7 @@ export class OperationsService {
       hasUnpublishedChanges: d?.dirty ?? false,
       draft: d?.config ?? {
         title: g.title,
+        category: g.category,
         description: g.description ?? '',
         imageUrl: g.imageUrl,
         price: g.price,
@@ -314,7 +315,7 @@ export class OperationsService {
           );
         }
         await m.query(
-          `UPDATE gachas SET title=$2,description=$3,price=$4,currency='GP',"imageUrl"=$5,"totalStock"=$6,sale_type=$7,"updatedAt"=clock_timestamp() WHERE id=$1`,
+          `UPDATE gachas SET title=$2,description=$3,price=$4,currency='GP',"imageUrl"=$5,"totalStock"=$6,sale_type=$7,category=$8,"updatedAt"=clock_timestamp() WHERE id=$1`,
           [
             id,
             c.title,
@@ -323,6 +324,7 @@ export class OperationsService {
             c.imageUrl,
             c.totalStock,
             c.saleType,
+            c.category ?? 'other',
           ],
         );
         const version = d.version + 1,

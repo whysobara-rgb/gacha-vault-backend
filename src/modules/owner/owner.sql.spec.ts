@@ -5,6 +5,9 @@ import { join } from 'path';
 import { randomUUID } from 'crypto';
 import { DataSource } from 'typeorm';
 import { ownerAccess } from '../../database/commands/owner-access';
+import { OwnerReviewService } from './owner-review.service';
+import { FulfillmentsService } from '../fulfillments/fulfillments.service';
+import { SupportService } from '../account-support/support.service';
 import { OwnerService } from './owner.service';
 import { OperationsService } from '../operations/operations.service';
 import { conversionFixture } from '../../../test/helpers/conversion-fixture';
@@ -384,5 +387,194 @@ describe('owner console SQL lifecycle', () => {
         (x) => x.event === 'SALES_PAUSED',
       ),
     ).toBe(true);
+  });
+  it('traces immutable openings to live inventory, shipments, tickets and private owner actions', async () => {
+    const a = await actor(['OWNER', 'FULFILLMENT']);
+    const f = await conversionFixture(query, 2);
+    const buyer = {
+      userId: f.userId,
+      email: 'buyer@example.invalid',
+      authVersion: 0,
+    };
+    const review = new OwnerReviewService(adapter, ops);
+    const shipping = new FulfillmentsService(adapter);
+    const support = new SupportService(adapter);
+    const [{ order_id: orderId }] = await query(
+      'SELECT order_id FROM owned_capsules WHERE id=$1',
+      [f.capsules[0]],
+    );
+    await query(
+      "UPDATE items SET fulfillment_type='PHYSICAL',shipping_enabled=true WHERE id IN(SELECT item_id FROM inventory_items WHERE user_id=$1)",
+      [f.userId],
+    );
+    const quote = await shipping.quote(f.userId, {
+      inventoryItemIds: f.ids,
+      recipient: {
+        name: 'Test',
+        phone: '01000000000',
+        postalCode: '00000',
+        address1: 'Test address',
+        address2: '1',
+        notes: '',
+        country: 'KR',
+      },
+    });
+    const parcel = await shipping.create(f.userId, randomUUID(), quote.quoteId);
+    const ticket = await support.create(buyer, randomUUID(), {
+      category: 'SHIPPING',
+      subject: '상품 확인 요청',
+      body: '배송 진행을 알려주세요',
+      orderId,
+    });
+    const key = randomUUID();
+    const payload = {
+      orderId,
+      ticketId: ticket.ticketId,
+      kind: 'DAMAGE',
+      summary: '파손 확인 중입니다',
+      internalNote: 'SUPPLIER-PRIVATE',
+      externalReference: 'PRIVATE-REF',
+    };
+    const c = await review.createCase(a, key, payload);
+    expect(await review.createCase(a, key, payload)).toEqual(c);
+    await expect(
+      review.createCase(a, key, { ...payload, kind: 'RETURN' }),
+    ).rejects.toMatchObject({ status: 409 });
+    const trace = await review.order(a, orderId);
+    expect(trace.contract).toBe('OWNER_ORDER_TRACE_V1');
+    expect(trace.capsules).toHaveLength(2);
+    expect(trace.capsules[0]).toMatchObject({
+      inventoryItemId: f.ids[0],
+      prize: { name: 'prize-0' },
+      inventoryStatus: 'SHIPPING_REQUESTED',
+    });
+    expect(trace.shipments[0].id).toBe(parcel.fulfillmentId);
+    expect(trace.tickets[0].id).toBe(ticket.ticketId);
+    expect(trace.cases[0].internalNote).toBe('SUPPLIER-PRIVATE');
+    for (const [kind, reference] of [
+      ['order', orderId],
+      ['inventory', String(f.ids[0])],
+      ['shipment', parcel.fulfillmentId],
+      ['ticket', ticket.ticketId],
+    ]) {
+      const r = await review.lookup(a, { kind: kind as any, reference });
+      expect(r.orders.map((x) => x.id)).toEqual([orderId]);
+    }
+    const publicRows = await review.customerCases(buyer, {
+      page: 1,
+      limit: 20,
+    });
+    expect(publicRows.items[0]).toMatchObject({
+      orderId,
+      summary: payload.summary,
+      status: 'OPEN',
+    });
+    expect(JSON.stringify(publicRows)).not.toMatch(
+      /PRIVATE|internalNote|externalReference|ticketId/,
+    );
+    expect(
+      (await review.customerCases(await actor([]), { page: 1, limit: 20 }))
+        .items,
+    ).toEqual([]);
+    await expect(review.order(buyer, orderId)).rejects.toMatchObject({
+      status: 403,
+    });
+    await expect(
+      review.lookup(buyer, {
+        kind: 'shipment',
+        reference: parcel.fulfillmentId,
+      }),
+    ).rejects.toMatchObject({ status: 403 });
+    await expect(review.order(a, randomUUID())).rejects.toMatchObject({
+      status: 404,
+    });
+    const update = {
+      expectedVersion: 1,
+      status: 'CLOSED',
+      summary: '확인 후 처리가 완료되었습니다',
+      internalNote: '실제 외부 처리 확인',
+      externalReference: 'REAL-CASE-001',
+      reason: '외부 처리 결과 확인',
+    };
+    await expect(
+      review.changeCase(a, c.id, randomUUID(), {
+        ...update,
+        externalReference: '',
+      }),
+    ).rejects.toMatchObject({ status: 400 });
+    const updateKey = randomUUID(),
+      closed = await review.changeCase(a, c.id, updateKey, update);
+    expect(await review.changeCase(a, c.id, updateKey, update)).toEqual(closed);
+    await expect(
+      review.changeCase(a, c.id, randomUUID(), update),
+    ).rejects.toMatchObject({ status: 409 });
+    expect(
+      (await review.customerCases(buyer, { page: 1, limit: 20 })).items[0]
+        .status,
+    ).toBe('CLOSED');
+    expect((await review.case(a, c.id)).events).toHaveLength(2);
+    expect(
+      (await review.cases(a, { page: 1, limit: 1, status: 'CLOSED' })).items,
+    ).toHaveLength(1);
+    // Tracking a return never invents a cash refund, inventory movement or replacement shipment.
+    expect((await review.order(a, orderId)).refunds).toEqual([]);
+    expect((await review.order(a, orderId)).shipments).toHaveLength(1);
+    await expect(
+      review.changeCase(a, c.id, randomUUID(), {
+        ...update,
+        expectedVersion: 2,
+        status: 'IN_PROGRESS',
+      }),
+    ).rejects.toMatchObject({ status: 409 });
+    await review.changeCase(a, c.id, randomUUID(), {
+      ...update,
+      expectedVersion: 2,
+      status: 'OPEN',
+    });
+    const foreign = await support.create(await actor([]), randomUUID(), {
+      category: 'OTHER',
+      subject: '다른 고객 문의',
+      body: '외부 문의',
+    });
+    await expect(
+      review.createCase(a, randomUUID(), {
+        ...payload,
+        ticketId: foreign.ticketId,
+      }),
+    ).rejects.toMatchObject({ status: 400 });
+    await query('UPDATE users SET auth_version=1 WHERE id=$1', [buyer.userId]);
+    await expect(
+      review.customerCases(buyer, { page: 1, limit: 20 }),
+    ).rejects.toMatchObject({ status: 401 });
+  });
+  it('publishes safe home banner metadata and rejects unsafe images', async () => {
+    const a = await actor();
+    const payload = {
+      ...campaign(),
+      imageUrl: 'https://example.invalid/banner.png',
+      homeVisible: true,
+      sortOrder: 3,
+    };
+    const c = await s.saveCampaign(a, null, randomUUID(), payload);
+    await s.campaignState(a, c.id, randomUUID(), {
+      expectedVersion: 1,
+      status: 'PUBLISHED',
+      confirmed: true,
+    });
+    const row = (await s.publicCampaigns()).items.find((x) => x.id === c.id);
+    expect(row).toMatchObject({
+      imageUrl: payload.imageUrl,
+      homeVisible: true,
+      sortOrder: 3,
+    });
+    expect(row).not.toHaveProperty('budgetKRW');
+    for (const imageUrl of [
+      'javascript:alert(1)',
+      'http://example.invalid',
+      'https://user:password@example.invalid',
+    ])
+      await expect(
+        s.saveCampaign(a, null, randomUUID(), { ...payload, imageUrl }),
+      ).rejects.toMatchObject({ status: 400 });
   });
 });

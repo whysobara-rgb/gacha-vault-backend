@@ -32,6 +32,9 @@ export class ProcurementChangeDto {
   @Equals(true) confirmed: boolean;
 }
 export class CampaignDto {
+  @IsOptional() @IsString() @MaxLength(2000) imageUrl?: string | null;
+  @IsOptional() @IsBoolean() homeVisible?: boolean;
+  @IsOptional() @IsInt() @Min(0) @Max(999) sortOrder?: number;
   @IsString() @MinLength(2) @MaxLength(120) title: string;
   @IsString() @MinLength(1) @MaxLength(3000) body: string;
   @IsIn(['SHOWCASE', 'NOTICE']) kind: string;

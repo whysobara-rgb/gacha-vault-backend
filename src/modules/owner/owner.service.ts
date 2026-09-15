@@ -7,6 +7,7 @@ import {
   fail,
   integer,
   operationsEnabled,
+  image,
 } from '../operations/operations.policy';
 import { plain } from '../account-support/account-support.policy';
 import { move } from '../supply/supply.db';
@@ -20,7 +21,7 @@ import {
   ProcurementDto,
 } from './owner.dto';
 const procurementSelect = `SELECT p.id,p.sku_id AS "skuId",s.code,s.name,p.supplier,p.reference,p.quantity,p.received,p.unit_cost_krw AS "unitCostKRW",p.expected_at AS "expectedAt",p.status,p.version,p.created_at AS "createdAt" FROM supplier_orders p JOIN warehouse_skus s ON s.id=p.sku_id`;
-const campaignSelect = `SELECT id,title,body,kind,gacha_id AS "gachaId",starts_at AS "startsAt",ends_at AS "endsAt",budget_krw AS "budgetKRW",status,version,created_at AS "createdAt" FROM owner_campaigns`;
+const campaignSelect = `SELECT id,title,body,kind,gacha_id AS "gachaId",starts_at AS "startsAt",ends_at AS "endsAt",budget_krw AS "budgetKRW",image_url AS "imageUrl",home_visible AS "homeVisible",sort_order AS "sortOrder",status,version,created_at AS "createdAt" FROM owner_campaigns`;
 function timestamp(value: string) {
   if (
     typeof value !== 'string' ||
@@ -47,6 +48,9 @@ export class OwnerService {
       supplierOrdering: 'MANUAL_EXTERNAL',
       campaignRewards: false,
       productionReady: false,
+      traceContract: 'OWNER_ORDER_TRACE_V1',
+      caseTracking: true,
+      homeBannerPublishing: true,
     };
   }
   private async page(
@@ -239,6 +243,8 @@ export class OwnerService {
     );
   }
   private campaign(d: CampaignDto) {
+    if (d.homeVisible != null && typeof d.homeVisible !== 'boolean')
+      throw fail('배너 노출 여부를 확인해주세요', 400);
     const startsAt = timestamp(d.startsAt),
       endsAt = timestamp(d.endsAt);
     if (
@@ -265,6 +271,9 @@ export class OwnerService {
       startsAt,
       endsAt,
       budgetKRW: integer(d.budgetKRW, 0, 100000000),
+      imageUrl: image(d.imageUrl ?? null),
+      homeVisible: d.homeVisible ?? false,
+      sortOrder: integer(d.sortOrder ?? 50, 0, 999),
     };
   }
   async campaigns(a: AuthenticatedUser, q: OwnerPageDto) {
@@ -345,6 +354,10 @@ export class OwnerService {
             ],
           );
         }
+        await m.query(
+          'UPDATE owner_campaigns SET image_url=$2,home_visible=$3,sort_order=$4 WHERE id=$1',
+          [id, c.imageUrl, c.homeVisible, c.sortOrder],
+        );
         await this.ops.event(m, a.userId, 'OWNER', id, 'CAMPAIGN_SAVED', {
           version: next,
         });
@@ -411,7 +424,7 @@ export class OwnerService {
   async publicCampaigns() {
     // Public projection deliberately excludes budget, internal status and audit data.
     const items = await this.db.query(
-      `SELECT c.id,c.title,c.body,c.kind,c.gacha_id AS "gachaId",c.starts_at AS "startsAt",c.ends_at AS "endsAt" FROM owner_campaigns c LEFT JOIN gachas g ON g.id=c.gacha_id WHERE c.status='PUBLISHED' AND c.starts_at<=now() AND c.ends_at>now() AND (c.gacha_id IS NULL OR g.active=true) ORDER BY c.starts_at DESC,c.id DESC LIMIT 100`,
+      `SELECT c.id,c.title,c.body,c.kind,c.gacha_id AS "gachaId",c.starts_at AS "startsAt",c.ends_at AS "endsAt",c.image_url AS "imageUrl",c.home_visible AS "homeVisible",c.sort_order AS "sortOrder" FROM owner_campaigns c LEFT JOIN gachas g ON g.id=c.gacha_id WHERE c.status='PUBLISHED' AND c.starts_at<=now() AND c.ends_at>now() AND (c.gacha_id IS NULL OR g.active=true) ORDER BY c.sort_order,c.starts_at DESC,c.id DESC LIMIT 100`,
     );
     return {
       contract: 'CAMPAIGNS_V1',

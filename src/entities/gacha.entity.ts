@@ -16,6 +16,7 @@ export enum CurrencyType {
 
 @Entity('gachas')
 export class Gacha {
+  @Column({ type: 'varchar', length: 16, default: 'other' }) category: string;
   @Column({
     name: 'sale_type',
     type: 'varchar',

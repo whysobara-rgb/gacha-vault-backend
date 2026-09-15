@@ -21,6 +21,7 @@ describe('conversion authentication and input boundary', () => {
       restore: jest.fn(() => ({ status: 'RESTORED' })),
       list: jest.fn(),
       findOne: jest.fn(),
+      byRequest: jest.fn(() => ({ conversionId: 'recovered' })),
     };
   beforeAll(async () => {
     const m = await Test.createTestingModule({
@@ -34,7 +35,16 @@ describe('conversion authentication and input boundary', () => {
         },
         JwtAuthGuard,
         JwtStrategy,
-        {provide:getRepositoryToken(User),useValue:{findOne:async({where}:any)=>({id:where.id,email:"http@example.invalid",authVersion:0})}},
+        {
+          provide: getRepositoryToken(User),
+          useValue: {
+            findOne: async ({ where }: any) => ({
+              id: where.id,
+              email: 'http@example.invalid',
+              authVersion: 0,
+            }),
+          },
+        },
       ],
     }).compile();
     app = m.createNestApplication();
@@ -91,6 +101,22 @@ describe('conversion authentication and input boundary', () => {
       .send({})
       .expect(400);
     expect(service.restore).not.toHaveBeenCalled();
+  });
+  it('scopes recovery to the authenticated account and validates its key', async () => {
+    const key = '00000000-0000-4000-8000-000000000001';
+    await request(app.getHttpServer())
+      .get('/inventory-conversions/requests/' + key)
+      .expect(401);
+    await request(app.getHttpServer())
+      .get('/inventory-conversions/requests/invalid')
+      .set('Authorization', 'Bearer ' + token)
+      .expect(400);
+    expect(service.byRequest).not.toHaveBeenCalled();
+    await request(app.getHttpServer())
+      .get('/inventory-conversions/requests/' + key)
+      .set('Authorization', 'Bearer ' + token)
+      .expect(200, { conversionId: 'recovered' });
+    expect(service.byRequest).toHaveBeenCalledWith(7, key);
   });
   it('keeps configuration unavailable explicit', async () => {
     await request(app.getHttpServer())

@@ -201,6 +201,23 @@ export class ConversionsService {
       return this.receipt(m, userId, id);
     });
   }
+  async byRequest(userId: number, key: string) {
+    key = validKey(key);
+    return this.database.transaction(async (m) => {
+      // Serialize with convert so recovery observes a committed receipt.
+      await this.user(m, userId);
+      const [row] = await m.query(
+        'SELECT id FROM inventory_conversions WHERE user_id=$1 AND idempotency_key=$2',
+        [userId, key],
+      );
+      if (!row) {
+        const error = fail('전환 요청 내역을 찾을 수 없습니다', 404);
+        error.errors.push('CONVERSION_REQUEST_NOT_FOUND');
+        throw error;
+      }
+      return this.receipt(m, userId, row.id);
+    });
+  }
   async findOne(userId: number, id: string) {
     validKey(id);
     return this.database.transaction('REPEATABLE READ', (m) =>

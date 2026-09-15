@@ -93,6 +93,28 @@ describe('GP conversion SQL lifecycle', () => {
       ).every((x) => x.status === 'STORED'),
     ).toBe(true);
   });
+  it('recovers the original request without crediting again or exposing another account', async () => {
+    const f = await conversionFixture(query),
+      other = await conversionFixture(query, 1);
+    const key = randomUUID(),
+      r = await execute(f.userId, f.ids, key);
+    expect((await service.byRequest(f.userId, key)).conversionId).toBe(
+      r.conversionId,
+    );
+    await expect(service.byRequest(other.userId, key)).rejects.toMatchObject({
+      status: 404,
+    });
+    await expect(
+      service.byRequest(f.userId, randomUUID()),
+    ).rejects.toMatchObject({ status: 404 });
+    await service.restore(f.userId, r.conversionId);
+    expect((await service.byRequest(f.userId, key)).status).toBe('RESTORED');
+    const [row] = await query(
+      "SELECT count(*) AS n FROM wallet_transactions WHERE user_id=$1 AND origin='INVENTORY_CONVERSION'",
+      [f.userId],
+    );
+    expect(Number(row.n)).toBe(1);
+  });
   it('rejects locked, shipped and foreign selections without partial credits', async () => {
     const f = await conversionFixture(query),
       other = await conversionFixture(query, 1);

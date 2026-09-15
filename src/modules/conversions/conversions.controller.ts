@@ -49,6 +49,12 @@ export class ConversionsController {
   ) {
     return this.service.list(user.userId, q.page, q.limit);
   }
+  @Get('requests/:key') byRequest(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('key', new ParseUUIDPipe({ version: '4' })) key: string,
+  ) {
+    return this.service.byRequest(user.userId, key);
+  }
   @Get(':id') findOne(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,

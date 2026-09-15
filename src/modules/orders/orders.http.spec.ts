@@ -1,3 +1,5 @@
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { User } from '../../entities';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
@@ -24,6 +26,7 @@ describe('order HTTP boundary', () => {
       controllers: [OrdersController],
       providers: [
         JwtStrategy,
+        {provide:getRepositoryToken(User),useValue:{findOne:async({where}:any)=>({id:where.id,email:"http@example.invalid",authVersion:0})}},
         JwtAuthGuard,
         {
           provide: ConfigService,

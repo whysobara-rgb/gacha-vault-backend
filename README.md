@@ -107,3 +107,5 @@ Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
 ## 출시 1단계: GP 전환·복구
 
 `GP_CONVERSION_RELEASE.md`에 API·정책·마이그레이션·검증·서버 반영 상태를 기록했다. 서버 코드와 테스트가 추가되었지만 실제 Render 배포와 다중 연결 검수는 아직 완료하지 않았다. 전환 보호 설정을 운영 환경에서 우회해서 활성화하면 안 된다.
+
+Account recovery and email verification: see [ACCOUNT_RECOVERY_RELEASE.md](ACCOUNT_RECOVERY_RELEASE.md).

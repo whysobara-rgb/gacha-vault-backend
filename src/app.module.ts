@@ -1,3 +1,5 @@
+import { RecoveryModule } from './modules/account-recovery/recovery.module';
+import { SupplyModule } from './modules/supply/supply.module';
 import { CommerceModule } from './modules/commerce/commerce.module';
 import { FulfillmentsModule } from './modules/fulfillments/fulfillments.module';
 import { ConversionsModule } from './modules/conversions/conversions.module';
@@ -17,9 +19,15 @@ import { WalletModule } from './modules/wallet/wallet.module';
 import { RankingsModule } from './modules/rankings/rankings.module';
 
 import { OrdersModule } from './modules/orders/orders.module';
+import { AccountSupportModule } from './modules/account-support/account-support.module';
+import { OperationsModule } from './modules/operations/operations.module';
 
 @Module({
   imports: [
+    OperationsModule,
+    SupplyModule,
+    RecoveryModule,
+    AccountSupportModule,
     CommerceModule,
     ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRootAsync({

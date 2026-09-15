@@ -1,3 +1,4 @@
+import { settleAllocation, notify } from '../supply/supply.db';
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { DataSource, EntityManager } from 'typeorm';
@@ -164,6 +165,12 @@ export class FulfillmentsService {
           : Number(r.cancelled_balance_after),
       createdAt: r.created_at,
       cancelledAt: r.cancelled_at,
+      operationsVersion: r.operations_version,
+      carrier: r.carrier,
+      trackingNumber: r.tracking_number,
+      dispatchedAt: r.dispatched_at,
+      deliveredAt: r.delivered_at,
+      trackingSource: r.carrier ? 'OPERATOR' : null,
       canCancel: CANCELLABLE.includes(r.status),
     };
   }
@@ -241,6 +248,15 @@ export class FulfillmentsService {
         "UPDATE inventory_items SET status='SHIPPING_REQUESTED' WHERE id=ANY($1::integer[])",
         [q.inventory_item_ids],
       );
+      await notify(
+        m,
+        userId,
+        `shipment:${id}:REQUESTED`,
+        'SHIPMENT_UPDATE',
+        id,
+        '배송 신청이 접수됐어요',
+        '배송 내역에서 준비 상태를 확인할 수 있습니다.',
+      );
       return this.receipt(m, userId, id);
     });
   }
@@ -267,6 +283,16 @@ export class FulfillmentsService {
         rows.some((i) => i.status !== 'SHIPPING_REQUESTED')
       )
         throw fail('상품 배송 상태가 변경되었습니다. 배송 내역을 확인해주세요');
+      await settleAllocation(m, id, userId, false);
+      await notify(
+        m,
+        userId,
+        `shipment:${id}:CANCELLED`,
+        'SHIPMENT_UPDATE',
+        id,
+        '배송 신청이 취소됐어요',
+        '상품은 보관함으로, 배송비 GP는 지갑으로 돌아갔습니다.',
+      );
       const balance = BigInt(u.balance) + BigInt(r.feeGP);
       if (balance > BigInt(Number.MAX_SAFE_INTEGER))
         throw fail('잔액 한도를 확인해주세요');
@@ -287,7 +313,7 @@ export class FulfillmentsService {
         [id],
       );
       await m.query(
-        "UPDATE fulfillment_orders SET status='CANCELLED',cancel_wallet_transaction_id=$1,cancelled_balance_after=$2,cancelled_at=clock_timestamp() WHERE id=$3",
+        "UPDATE fulfillment_orders SET status='CANCELLED',operations_version=operations_version+1,cancel_wallet_transaction_id=$1,cancelled_balance_after=$2,cancelled_at=clock_timestamp() WHERE id=$3",
         [tx.id, balance.toString(), id],
       );
       return this.receipt(m, userId, id);

@@ -10,6 +10,7 @@ import { ResponseCode } from '../../common/constants/response-code.constant';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
 import { SocialLoginDto } from './dto/social-login.dto';
+import { password as validatePassword } from '../account-support/account-support.policy';
 
 const BCRYPT_SALT_ROUNDS = 10;
 
@@ -23,6 +24,7 @@ export class AuthService {
   ) {}
 
   async signup(dto: SignupDto) {
+    validatePassword(dto.password);
     const existing = await this.userRepository.findOne({
       where: { email: dto.email },
     });
@@ -90,7 +92,7 @@ export class AuthService {
       this.configService.get<string>('JWT_EXPIRES_IN') ?? 3600,
     );
     const accessToken = await this.jwtService.signAsync(
-      { sub: user.id, email: user.email },
+      { sub: user.id, email: user.email, av: user.authVersion },
       { expiresIn },
     );
 

@@ -1,3 +1,4 @@
+import { User } from '../../entities';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
@@ -50,6 +51,7 @@ describe('authenticated inventory lock HTTP contract', () => {
         InventoryService,
         JwtAuthGuard,
         JwtStrategy,
+        {provide:getRepositoryToken(User),useValue:{findOne:async({where}:any)=>({id:where.id,email:"http@example.invalid",authVersion:0})}},
         {
           provide: ConfigService,
           useValue: new ConfigService({ JWT_SECRET: secret }),

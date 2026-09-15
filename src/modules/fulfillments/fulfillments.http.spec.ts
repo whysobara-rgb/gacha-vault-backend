@@ -1,3 +1,5 @@
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { User } from '../../entities';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
@@ -34,6 +36,7 @@ describe('fulfillment authentication and input boundary', () => {
         },
         JwtAuthGuard,
         JwtStrategy,
+        {provide:getRepositoryToken(User),useValue:{findOne:async({where}:any)=>({id:where.id,email:"http@example.invalid",authVersion:0})}},
       ],
     }).compile();
     app = m.createNestApplication();

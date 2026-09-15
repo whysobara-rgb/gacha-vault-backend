@@ -21,6 +21,10 @@ export async function conversionFixture(
     `INSERT INTO capsule_orders(id,user_id,idempotency_key,gacha_id,title_snapshot,unit_price,quantity,total,currency,status,wallet_transaction_id,balance_after) VALUES($1,$2,$3,$4,'fixture',100,$6,$7,'GP','PAID',$5,900)`,
     [order, u.id, randomUUID(), g.id, w.id, count, 100 * count],
   );
+  const [sku] = await query(
+    'INSERT INTO warehouse_skus(code,name,on_hand) VALUES($1,$2,$3) RETURNING id',
+    [randomUUID(), 'fixture physical stock', count],
+  );
   for (let i = 0; i < count; i++) {
     const premium = i % 2 === 1,
       value = premium ? 1000 : 100,
@@ -29,6 +33,10 @@ export async function conversionFixture(
       `INSERT INTO items(name,rarity,"estimatedValue","isPremium","conversionGP") VALUES($1,$2,$3,$4,$5) RETURNING id`,
       ['prize-' + i, premium ? 'SSR' : 'N', value, premium, amount],
     );
+    await query('UPDATE items SET warehouse_sku_id=$1 WHERE id=$2', [
+      sku.id,
+      item.id,
+    ]);
     const [inv] = await query(
       `INSERT INTO inventory_items(user_id,item_id) VALUES($1,$2) RETURNING id`,
       [u.id, item.id],

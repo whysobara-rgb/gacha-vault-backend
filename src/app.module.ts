@@ -1,4 +1,5 @@
 import { RecoveryModule } from './modules/account-recovery/recovery.module';
+import { OwnerModule } from './modules/owner/owner.module';
 import { SupplyModule } from './modules/supply/supply.module';
 import { CommerceModule } from './modules/commerce/commerce.module';
 import { FulfillmentsModule } from './modules/fulfillments/fulfillments.module';
@@ -24,6 +25,7 @@ import { OperationsModule } from './modules/operations/operations.module';
 
 @Module({
   imports: [
+    OwnerModule,
     OperationsModule,
     SupplyModule,
     RecoveryModule,

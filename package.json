@@ -27,7 +27,8 @@
     "migration:show:compiled": "node node_modules/typeorm/cli.js migration:show -d dist/data-source.js",
     "migration:run:compiled": "node node_modules/typeorm/cli.js migration:run -d dist/data-source.js --transaction all",
     "migration:revert": "npm run typeorm -- migration:revert -d src/data-source.ts",
-    "test:postgres": "jest --config ./test/jest-postgres.json --runInBand"
+    "test:postgres": "jest --config ./test/jest-postgres.json --runInBand",
+    "owner:access": "ts-node -r tsconfig-paths/register src/database/commands/owner-access.cli.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",

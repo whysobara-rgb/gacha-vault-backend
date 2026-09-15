@@ -20,7 +20,8 @@ import {
   PublishCatalogDto,
   SaveCatalogDto,
 } from './operations.dto';
-type Permission = 'CATALOG' | 'FULFILLMENT' | 'WAREHOUSE' | 'ANNOUNCEMENTS';
+type Permission =
+  'CATALOG' | 'FULFILLMENT' | 'WAREHOUSE' | 'ANNOUNCEMENTS' | 'OWNER';
 @Injectable()
 export class OperationsService {
   constructor(private readonly db: DataSource) {}

@@ -1,0 +1,38 @@
+name: Supply view (synthetic contract only)
+on:
+  pull_request:
+    paths:
+      - 'tools/owner-console/**'
+      - '.github/workflows/supply-view.yml'
+      - 'docs/SUPPLY_VIEW_INTEGRATION.ko.md'
+permissions:
+  contents: read
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate and test presentation module (no DB or credentials)
+        run: |
+          set -o pipefail
+          mkdir -p supply-view-evidence
+          git rev-parse HEAD > supply-view-evidence/checked-commit.txt
+          node --check tools/owner-console/supply-view.mjs
+          node --test tools/owner-console/supply-view.test.mjs 2>&1 | tee supply-view-evidence/tests.tap
+          printf '%s\n' 'Synthetic response rendering and reader-state tests only. No browser, live server, database, payment or existing admin.html deployment.' > supply-view-evidence/SCOPE.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: supply-view-contract-evidence
+          retention-days: 14
+          if-no-files-found: error
+          path: |
+            supply-view-evidence/
+            tools/owner-console/supply-view.mjs
+            tools/owner-console/supply-view.test.mjs
+            docs/SUPPLY_VIEW_INTEGRATION.ko.md

@@ -38,6 +38,19 @@ export class PaymentsService {
     if (!r) throw fail('결제 요청을 찾을 수 없습니다', 404);
     return r;
   }
+  /** Caller already holds the user lock. Follow user -> gacha -> payment order. */
+  private async lockReservation(m: EntityManager, u: number, id: string) {
+    const initial = await this.row(m, u, id);
+    await m.query('SELECT id FROM gachas WHERE id=$1 FOR UPDATE', [
+      initial.gacha_id,
+    ]);
+    const [r] = await m.query(
+      'SELECT * FROM payment_intents WHERE id=$1 AND user_id=$2 FOR UPDATE',
+      [id, u],
+    );
+    if (!r) throw fail('결제 요청을 찾을 수 없습니다', 404);
+    return r;
+  }
   private present(r: any) {
     return {
       paymentId: r.id,
@@ -239,7 +252,9 @@ export class PaymentsService {
       throw fail('결제 인증 결과를 확인해주세요', 400);
     const dispatch = await this.db.transaction(async (m) => {
       await lockUser(m, u);
-      const r = await this.row(m, u, id);
+      // Promoting an expiring reservation to CONFIRMING changes available
+      // stock. Serialize it with GP purchases and other card reservations.
+      const r = await this.lockReservation(m, u, id);
       if (
         amount !== r.amount ||
         (r.transaction_id && r.transaction_id !== transactionId)
@@ -249,10 +264,15 @@ export class PaymentsService {
         return { dispatch: false, r };
       if (['CONFIRMING', 'UNKNOWN'].includes(r.status))
         return { dispatch: false, r };
-      if (
-        r.status !== 'PREPARED' ||
-        new Date(r.expires_at).getTime() <= Date.now()
-      )
+      if (r.status !== 'PREPARED')
+        throw fail('결제 요청이 만료되었거나 취소되었습니다');
+      // Check the database's current clock AFTER all lock waits. Do not use
+      // Date.now() or transaction-start time to revive an expired reservation.
+      const [expiry] = await m.query(
+        'SELECT expires_at>clock_timestamp() AS valid FROM payment_intents WHERE id=$1 AND user_id=$2',
+        [id, u],
+      );
+      if (!expiry?.valid)
         throw fail('결제 요청이 만료되었거나 취소되었습니다');
       if (r.merchant_id !== this.provider.config().merchantId)
         throw fail('결제 상점 설정이 변경되었습니다');

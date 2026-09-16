@@ -93,10 +93,14 @@ export function createSupplyReader({ request, getScope, onChange, timeoutMs = 10
     try {
       const cancelled = new Promise((_, reject) => {
         abortHandler = () => reject(new Error('CANCELLED'));
-        controller.signal.addEventListener('abort', abortHandler, { once: true });
+        if (controller.signal.aborted) abortHandler();
+        else controller.signal.addEventListener('abort', abortHandler, { once: true });
         timer = setTimeout(() => controller.abort(), timeoutMs);
       });
-      const input = await Promise.race([Promise.resolve().then(() => request('/owner/supply-readiness', { method: 'GET', cache: 'no-store', signal: controller.signal })), cancelled]);
+      const input = await Promise.race([Promise.resolve().then(() => {
+        if (disposed || current !== version || controller.signal.aborted || getScope() !== scope) throw new Error('SCOPE_INVALIDATED');
+        return request('/owner/supply-readiness', { method: 'GET', cache: 'no-store', signal: controller.signal });
+      }), cancelled]);
       if (disposed || current !== version) return;
       if (getScope() !== scope) { invalidate(); return; }
       validateReport(input);

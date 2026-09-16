@@ -86,3 +86,13 @@ test('destroy prevents late callbacks and future requests', async () => {
   const d=deferred(); let calls=0; const {states,control}=reader(()=>{calls++; return d.promise;});
   const p=control.refresh(); await tick(); control.destroy(); const size=states.length; d.resolve(fixture()); await p; await control.refresh(); assert.equal(states.length,size); assert.equal(calls,1);
 });
+test('immediate logout before dispatch sends no request', async () => {
+  let calls=0; const {control}=reader(async()=>{calls++;return fixture();});
+  const pending=control.refresh(); control.destroy(); await pending;
+  assert.equal(calls,0);
+});
+test('scope switch before dispatch sends no request under a new identity', async () => {
+  let calls=0,scope='server-a:owner-a'; const {states,control}=reader(async()=>{calls++;return fixture();},{getScope:()=>scope});
+  const pending=control.refresh(); scope='server-b:owner-b'; await pending;
+  assert.equal(calls,0); assert.equal(states.at(-1).report,null); control.destroy();
+});

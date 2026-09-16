@@ -39,6 +39,7 @@ jobs:
       - name: Check rehearsal guard and JavaScript syntax
         run: |
           node --check tools/release/rehearsal.cjs
+          node --check tools/release/payment-regression.cjs
           node tools/release/rehearsal.cjs --self-test
       - run: npm run build
       - run: npm run check:types
@@ -47,6 +48,12 @@ jobs:
         env:
           NODE_ENV: test
           TEST_POSTGRES: 'true'
+      - name: Prove payment expiry failures on old code and success on fixed code
+        run: node tools/release/payment-regression.cjs
+        env:
+          NODE_ENV: test
+          TEST_POSTGRES: 'true'
+          CI_REHEARSAL: 'true'
       - name: Synthetic dump restore upgrade and fifty-client HTTP rehearsal
         run: |
           set -o pipefail
@@ -70,8 +77,10 @@ jobs:
         run: |
           echo '## Synthetic release rehearsal' >> "$GITHUB_STEP_SUMMARY"
           echo 'This job does not connect to Render or any external PG. Data is generated locally. Passing does not mean a live DB backup, deployment, or production launch was completed.' >> "$GITHUB_STEP_SUMMARY"
-          if [ -f rehearsal-results/report.json ]; then
-            echo '```json' >> "$GITHUB_STEP_SUMMARY"
-            cat rehearsal-results/report.json >> "$GITHUB_STEP_SUMMARY"
-            echo '```' >> "$GITHUB_STEP_SUMMARY"
-          fi
+          for report in rehearsal-results/report.json rehearsal-results/payment-regression.json; do
+            if [ -f "$report" ]; then
+              echo '```json' >> "$GITHUB_STEP_SUMMARY"
+              cat "$report" >> "$GITHUB_STEP_SUMMARY"
+              echo '```' >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done

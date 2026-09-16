@@ -1,3 +1,4 @@
+import { assertDemoSeedAllowed } from '../../common/policies/legacy-policy';
 /**
  * Standalone seed script — populates the database with demo data:
  *   - 8 Gachas, each with a real hero product photo (imageUrl) and a
@@ -342,6 +343,7 @@ const gachaDefs: GachaDef[] = [
 ];
 
 async function run() {
+  assertDemoSeedAllowed();
   const dataSource = new DataSource({
     type: 'postgres',
     host: process.env.DB_HOST,

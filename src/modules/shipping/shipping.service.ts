@@ -1,3 +1,4 @@
+import { assertLegacyTransactionsAllowed } from '../../common/policies/legacy-policy';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import {
@@ -26,12 +27,13 @@ export class ShippingService {
    * Creates a shipping request as one atomic transaction:
    *   1. Lock the user row, verify balance >= DELIVERY_FEE.
    *   2. Verify every requested InventoryItem belongs to the user,
-   *      is not locked, and is currently STORED.
+   *      is currently STORED (conversion lock does not block shipping).
    *   3. Deduct the delivery fee, record a WalletTransaction (USE).
    *   4. Create the ShippingRequest + pivot rows.
    *   5. Flip each InventoryItem to SHIPPING_REQUESTED and lock it.
    */
   async create(userId: number, dto: CreateShippingRequestDto) {
+    assertLegacyTransactionsAllowed();
     return this.dataSource.transaction(async (manager) => {
       const userRepo = manager.getRepository(User);
       const inventoryRepo = manager.getRepository(InventoryItem);
@@ -62,6 +64,13 @@ export class ShippingService {
       }
 
       const uniqueIds = Array.from(new Set(dto.inventoryItemIds));
+      if (uniqueIds.length !== dto.inventoryItemIds.length) {
+        throw new BusinessException(
+          ResponseCode.VALIDATION_FAILED,
+          '중복 상품은 배송 요청할 수 없습니다',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
       const items = await inventoryRepo
         .createQueryBuilder('inv')
         .setLock('pessimistic_write')
@@ -84,7 +93,7 @@ export class ShippingService {
             HttpStatus.FORBIDDEN,
           );
         }
-        if (item.isLocked || item.status !== InventoryStatus.STORED) {
+        if (item.status !== InventoryStatus.STORED) {
           throw new BusinessException(
             ResponseCode.CONFLICT,
             `Inventory item ${item.id} is not eligible for shipping`,
@@ -152,7 +161,7 @@ export class ShippingService {
     const [rows, totalCount] = await shippingRepo.findAndCount({
       where: { userId },
       relations: ['items', 'items.inventoryItem', 'items.inventoryItem.item'],
-      order: { createdAt: 'DESC' },
+      order: { createdAt: 'DESC', id: 'DESC' },
       skip: (page - 1) * limit,
       take: limit,
     });

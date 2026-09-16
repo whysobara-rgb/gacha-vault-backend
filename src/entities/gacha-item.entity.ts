@@ -32,6 +32,9 @@ export class GachaItem {
   @Column({ name: 'item_id' })
   itemId: number;
 
+  @Column({ type: 'integer', nullable: true })
+  probabilityPpm: number | null;
+
   // Relative weight used for weighted-random draw selection.
   @Column({ type: 'int', default: 1 })
   weight: number;

@@ -1,125 +1,100 @@
-import { Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
-import { Draw, InventoryItem, User } from '../../entities';
+import { BusinessException } from '../../common/exceptions/business.exception';
+import { ResponseCode } from '../../common/constants/response-code.constant';
+
+const SOURCE = 'CONFIRMED_CAPSULE_OPENINGS_V1';
+// Old demo Draw records are deliberately absent from public rankings.
+const CONFIRMED = `
+  FROM capsule_openings opening
+  JOIN owned_capsules capsule ON capsule.id = opening.capsule_id AND capsule.status = 'OPENED'
+  JOIN capsule_orders orders ON orders.id = capsule.order_id AND orders.status IN ('PAID','PARTIALLY_REFUNDED')
+  JOIN users account ON account.id = orders.user_id
+`;
 
 @Injectable()
 export class RankingsService {
   constructor(private readonly dataSource: DataSource) {}
 
-  /**
-   * Top users ranked by lifetime total estimated value won (sum of
-   * inventory item estimatedValue joined through their draws), tie-broken
-   * by draw count. Mirrors a typical gacha app "명예의 전당" leaderboard.
-   */
-  async getUserRanking(limit = 50) {
-    const rows: Array<{
-      userId: number;
-      nickname: string;
-      drawCount: string;
-      totalValue: string | null;
-    }> = await this.dataSource
-      .getRepository(User)
-      .createQueryBuilder('user')
-      .innerJoin('user.draws', 'draw')
-      .leftJoin('draw.inventoryItem', 'inventoryItem')
-      .leftJoin('inventoryItem.item', 'item')
-      .select('user.id', 'userId')
-      .addSelect('user.nickname', 'nickname')
-      .addSelect('COUNT(DISTINCT draw.id)', 'drawCount')
-      .addSelect('COALESCE(SUM(item.estimatedValue), 0)', 'totalValue')
-      .groupBy('user.id')
-      .addGroupBy('user.nickname')
-      .orderBy('"totalValue"', 'DESC')
-      .addOrderBy('"drawCount"', 'DESC')
-      .limit(limit)
-      .getRawMany();
+  private limit(value: number) {
+    if (!Number.isInteger(value) || value < 1 || value > 100) {
+      throw new BusinessException(
+        ResponseCode.VALIDATION_FAILED,
+        '조회 개수는 1~100 사이여야 합니다',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    return value;
+  }
 
+  async getUserRanking(limit = 50) {
+    const rows = await this.dataSource.query(
+      `
+      SELECT account.id AS "userId", account.nickname, COUNT(*)::int AS "drawCount",
+        COALESCE(SUM((opening.prize->>'estimatedValue')::bigint), 0)::text AS "totalValue"
+      ${CONFIRMED}
+      GROUP BY account.id, account.nickname
+      ORDER BY SUM((opening.prize->>'estimatedValue')::bigint) DESC, COUNT(*) DESC, account.id ASC
+      LIMIT $1`,
+      [this.limit(limit)],
+    );
     return {
+      source: SOURCE,
       items: rows.map((row, index) => ({
         rank: index + 1,
         userId: row.userId,
-        nickname: row.nickname,
-        drawCount: Number(row.drawCount),
-        totalValue: Number(row.totalValue ?? 0),
+        nickname: maskNickname(row.nickname),
+        drawCount: row.drawCount,
+        totalValue: Number(row.totalValue),
       })),
     };
   }
 
-  /**
-   * Most-drawn gachas over all time — powers a "지금 가장 인기있는 박스"
-   * ranking tab, independent from the home screen's default ordering.
-   */
   async getPopularGachas(limit = 20) {
-    const rows: Array<{
-      gachaId: number;
-      title: string;
-      imageUrl: string | null;
-      accentColorHex: string | null;
-      price: string;
-      drawCount: string;
-    }> = await this.dataSource
-      .getRepository(Draw)
-      .createQueryBuilder('draw')
-      .innerJoin('draw.gacha', 'gacha')
-      .select('gacha.id', 'gachaId')
-      .addSelect('gacha.title', 'title')
-      .addSelect('gacha.imageUrl', 'imageUrl')
-      .addSelect('gacha.accentColorHex', 'accentColorHex')
-      .addSelect('gacha.price', 'price')
-      .addSelect('COUNT(draw.id)', 'drawCount')
-      .where('gacha.active = :active', { active: true })
-      .groupBy('gacha.id')
-      .orderBy('"drawCount"', 'DESC')
-      .limit(limit)
-      .getRawMany();
-
+    const rows = await this.dataSource.query(
+      `
+      SELECT gacha.id AS "gachaId", gacha.title, gacha."imageUrl" AS "imageUrl",
+        gacha."accentColorHex" AS "accentColorHex", gacha.price, COUNT(*)::int AS "drawCount"
+      ${CONFIRMED}
+      JOIN gachas gacha ON gacha.id = orders.gacha_id AND gacha.active = true
+      GROUP BY gacha.id
+      ORDER BY COUNT(*) DESC, gacha.id ASC
+      LIMIT $1`,
+      [this.limit(limit)],
+    );
     return {
-      items: rows.map((row, index) => ({
-        rank: index + 1,
-        gachaId: row.gachaId,
-        title: row.title,
-        imageUrl: row.imageUrl,
-        accentColorHex: row.accentColorHex,
-        price: Number(row.price),
-        drawCount: Number(row.drawCount),
-      })),
+      source: SOURCE,
+      items: rows.map((row, index) => ({ ...row, rank: index + 1 })),
     };
   }
 
-  /**
-   * Most recent high-value wins across all users — powers a "실시간 당첨"
-   * feed tab (richer than the home screen's scrolling ticker: includes
-   * item image + masked nickname + rarity).
-   */
   async getRecentBigWins(limit = 30) {
-    const rows: InventoryItem[] = await this.dataSource
-      .getRepository(InventoryItem)
-      .createQueryBuilder('inventoryItem')
-      .innerJoinAndSelect('inventoryItem.item', 'item')
-      .innerJoinAndSelect('inventoryItem.user', 'user')
-      .innerJoinAndSelect('inventoryItem.draw', 'draw')
-      .innerJoinAndSelect('draw.gacha', 'gacha')
-      .orderBy('inventoryItem.createdAt', 'DESC')
-      .limit(limit)
-      .getMany();
-
+    const rows = await this.dataSource.query(
+      `
+      SELECT opening.inventory_item_id AS "inventoryItemId", account.nickname,
+        orders.title_snapshot AS "gachaTitle", opening.prize, opening.opened_at AS "wonAt"
+      ${CONFIRMED}
+      ORDER BY opening.opened_at DESC, opening.capsule_id DESC
+      LIMIT $1`,
+      [this.limit(limit)],
+    );
     return {
+      source: SOURCE,
       items: rows.map((row) => ({
-        inventoryItemId: row.id,
-        nickname: maskNickname(row.user.nickname),
-        gachaTitle: row.draw?.gacha?.title ?? '',
-        itemName: row.item.name,
-        rarity: row.item.rarity,
-        estimatedValue: row.item.estimatedValue,
-        imageUrl: row.item.imageUrl,
-        wonAt: row.createdAt,
+        inventoryItemId: row.inventoryItemId,
+        nickname: maskNickname(row.nickname),
+        gachaTitle: row.gachaTitle,
+        itemName: row.prize.name,
+        rarity: row.prize.rarity,
+        estimatedValue: row.prize.estimatedValue,
+        imageUrl: row.prize.imageUrl,
+        wonAt: row.wonAt,
       })),
     };
   }
 }
 
-/** "김철수" -> "김**" style masking for public leaderboard/feed display. */
 function maskNickname(nickname: string): string {
-  if (nickname.length <= 1) return nickname;
-  return nickname[0] + '*'.repeat(Math.min(nickname.length - 1, 2));
+  const characters = Array.from(nickname);
+  return characters.length <= 1 ? nickname : characters[0] + '**';
 }

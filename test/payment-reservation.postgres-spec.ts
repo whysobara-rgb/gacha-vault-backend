@@ -34,7 +34,7 @@ const observed = <T>(p: Promise<T>) => p.then(
 describe('card reservation expiry and recovery safety (mock PG)', () => {
   const env = { ...process.env };
   let orders: OrdersService, payments: PaymentsService;
-  let confirm: jest.Mock;
+  let confirm: jest.Mock, transactionId: string;
   beforeAll(async () => {
     if (process.env.TEST_POSTGRES !== 'true' || process.env.NODE_ENV !== 'test')
       throw new Error('Dedicated local test database required');
@@ -49,6 +49,7 @@ describe('card reservation expiry and recovery safety (mock PG)', () => {
     orders = new OrdersService(db);
   });
   beforeEach(() => {
+    transactionId = randomUUID().replace(/-/g, '');
     confirm = jest.fn().mockImplementation(async ({ transactionId }) => ({
       confirmed: true, transactionId, code: 'SUCCESS',
     }));
@@ -90,7 +91,7 @@ describe('card reservation expiry and recovery safety (mock PG)', () => {
     await orders.purchase(f.buyer, randomUUID(), f.dto);
     // Model application clock lag without changing the PostgreSQL clock.
     jest.spyOn(Date, 'now').mockReturnValue(0);
-    const result = await observed(payments.confirm(f.owner, p.paymentId, 'CLOCK_LAG', 100));
+    const result = await observed(payments.confirm(f.owner, p.paymentId, transactionId, 100));
     expect(await orderCount(f.g)).toBe(1);
     expect(result.ok).toBe(false);
     if (result.ok === false) expect(result.error.getStatus()).toBe(409);
@@ -109,7 +110,7 @@ describe('card reservation expiry and recovery safety (mock PG)', () => {
       await blocker.startTransaction();
       const [{ pid }] = await blocker.query('SELECT pg_backend_pid() AS pid');
       await blocker.query('SELECT id FROM payment_intents WHERE id=$1 FOR UPDATE', [p.paymentId]);
-      approval = observed(payments.confirm(f.owner, p.paymentId, 'LOCK_WAIT', 100));
+      approval = observed(payments.confirm(f.owner, p.paymentId, transactionId, 100));
       await until(async () => (await db.query('SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE datname=current_database() AND $1::integer=ANY(pg_blocking_pids(pid))) AS waiting', [pid]))[0].waiting, 'approval blocked by payment row');
       await until(async () => (await db.query('SELECT expires_at<=clock_timestamp() AS expired FROM payment_intents WHERE id=$1', [p.paymentId]))[0].expired, 'reservation expiry');
       purchase = observed(orders.purchase(f.buyer, randomUUID(), f.dto));
@@ -151,18 +152,18 @@ describe('card reservation expiry and recovery safety (mock PG)', () => {
     const p = await payments.prepare(f.owner, randomUUID(), f.dto);
     let settle!: (value: any) => void;
     confirm.mockImplementation(() => new Promise((resolve) => { settle = resolve; }));
-    const running = observed(payments.confirm(f.owner, p.paymentId, 'UNKNOWN_CASE', 100));
+    const running = observed(payments.confirm(f.owner, p.paymentId, transactionId, 100));
     try {
       await until(async () => confirm.mock.calls.length === 1, 'mock PG dispatch');
       await expire(p.paymentId);
       await expect(orders.purchase(f.buyer, randomUUID(), f.dto)).rejects.toMatchObject({ status: 409 });
-      const inProgress = await payments.confirm(f.owner, p.paymentId, 'UNKNOWN_CASE', 100);
+      const inProgress = await payments.confirm(f.owner, p.paymentId, transactionId, 100);
       expect(inProgress.status).toBe('CONFIRMING');
       settle({ confirmed: false });
       const result = await running;
       expect(result.ok).toBe(true);
       if (result.ok) expect(result.value.status).toBe('UNKNOWN');
-      expect((await payments.confirm(f.owner, p.paymentId, 'UNKNOWN_CASE', 100)).status).toBe('UNKNOWN');
+      expect((await payments.confirm(f.owner, p.paymentId, transactionId, 100)).status).toBe('UNKNOWN');
       await expect(payments.cancelPrepared(f.owner, p.paymentId)).rejects.toMatchObject({ status: 409 });
       await expect(orders.purchase(f.buyer, randomUUID(), f.dto)).rejects.toMatchObject({ status: 409 });
       expect(confirm).toHaveBeenCalledTimes(1);
@@ -176,7 +177,7 @@ describe('card reservation expiry and recovery safety (mock PG)', () => {
     const cancelled = await Promise.all(Array.from({ length: 6 }, () => payments.cancelPrepared(f.owner, p.paymentId)));
     expect(cancelled.every((r) => r.status === 'CANCELLED')).toBe(true);
     await orders.purchase(f.buyer, randomUUID(), f.dto);
-    await expect(payments.confirm(f.owner, p.paymentId, 'LATE_CALLBACK', 100)).rejects.toMatchObject({ status: 409 });
+    await expect(payments.confirm(f.owner, p.paymentId, transactionId, 100)).rejects.toMatchObject({ status: 409 });
     expect(confirm).not.toHaveBeenCalled();
     expect(await orderCount(f.g)).toBe(1);
   });
@@ -188,7 +189,7 @@ describe('card reservation expiry and recovery safety (mock PG)', () => {
     await db.query(`CREATE FUNCTION ${tag}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF EXISTS(SELECT 1 FROM capsule_orders WHERE id=NEW.order_id AND gacha_id=${Number(f.g)}) THEN RAISE EXCEPTION 'synthetic payment issuance failure'; END IF; RETURN NEW; END $$`);
     try {
       await db.query(`CREATE TRIGGER ${tag} BEFORE INSERT ON owned_capsules FOR EACH ROW EXECUTE FUNCTION ${tag}()`);
-      await expect(payments.confirm(f.owner, p.paymentId, 'APPROVED_RECOVERY', 100)).rejects.toThrow('synthetic payment issuance failure');
+      await expect(payments.confirm(f.owner, p.paymentId, transactionId, 100)).rejects.toThrow('synthetic payment issuance failure');
       expect((await payments.findOne(f.owner, p.paymentId)).status).toBe('APPROVED');
       expect(await orderCount(f.g)).toBe(0);
       await expire(p.paymentId);
@@ -197,7 +198,7 @@ describe('card reservation expiry and recovery safety (mock PG)', () => {
       await db.query(`DROP TRIGGER IF EXISTS ${tag} ON owned_capsules`);
       await db.query(`DROP FUNCTION ${tag}()`);
     }
-    const recovered = await Promise.all(Array.from({ length: 6 }, () => payments.confirm(f.owner, p.paymentId, 'APPROVED_RECOVERY', 100)));
+    const recovered = await Promise.all(Array.from({ length: 6 }, () => payments.confirm(f.owner, p.paymentId, transactionId, 100)));
     expect(recovered.every((r) => r.status === 'PAID')).toBe(true);
     expect(new Set(recovered.map((r) => r.orderId)).size).toBe(1);
     expect(confirm).toHaveBeenCalledTimes(1);
@@ -211,8 +212,8 @@ describe('card reservation expiry and recovery safety (mock PG)', () => {
   it('rejects wrong owners and mismatched amount before calling the provider', async () => {
     const f = await fixture();
     const p = await payments.prepare(f.owner, randomUUID(), f.dto);
-    await expect(payments.confirm(f.buyer, p.paymentId, 'WRONG_OWNER', 100)).rejects.toMatchObject({ status: 404 });
-    await expect(payments.confirm(f.owner, p.paymentId, 'WRONG_AMOUNT', 200)).rejects.toMatchObject({ status: 409 });
+    await expect(payments.confirm(f.buyer, p.paymentId, transactionId, 100)).rejects.toMatchObject({ status: 404 });
+    await expect(payments.confirm(f.owner, p.paymentId, transactionId, 200)).rejects.toMatchObject({ status: 409 });
     expect(confirm).not.toHaveBeenCalled();
     expect((await payments.findOne(f.owner, p.paymentId)).status).toBe('PREPARED');
   });

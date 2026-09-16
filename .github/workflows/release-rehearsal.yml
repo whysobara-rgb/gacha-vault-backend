@@ -46,7 +46,9 @@ jobs:
       - run: npm run build
       - run: npm run check:types
       - name: Existing integration tests on PostgreSQL 18
-        run: npm run test:postgres
+        run: |
+          mkdir -p rehearsal-results
+          npm run test:postgres -- --json --outputFile=rehearsal-results/postgres-integration.json
         env:
           NODE_ENV: test
           TEST_POSTGRES: 'true'

@@ -93,7 +93,7 @@ describe('card reservation expiry and recovery safety (mock PG)', () => {
     const result = await observed(payments.confirm(f.owner, p.paymentId, 'CLOCK_LAG', 100));
     expect(await orderCount(f.g)).toBe(1);
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error.getStatus()).toBe(409);
+    if (result.ok === false) expect(result.error.getStatus()).toBe(409);
     expect(confirm).not.toHaveBeenCalled();
   });
 
@@ -116,7 +116,7 @@ describe('card reservation expiry and recovery safety (mock PG)', () => {
       await blocker.rollbackTransaction();
       const [a, b] = await Promise.all([approval, purchase]);
       expect(a.ok).toBe(false);
-      if (!a.ok) expect(a.error.getStatus()).toBe(409);
+      if (a.ok === false) expect(a.error.getStatus()).toBe(409);
       expect(b.ok).toBe(true);
       expect(confirm).not.toHaveBeenCalled();
       expect(await orderCount(f.g)).toBe(1);
@@ -130,11 +130,11 @@ describe('card reservation expiry and recovery safety (mock PG)', () => {
   it('shares the final stock between 25 card reservations and 25 GP purchases from different users', async () => {
     const f = await fixture();
     const users = await Promise.all(Array.from({ length: 50 }, user));
-    const responses = await Promise.all(users.map((u, i) => observed(
+    const responses = await Promise.all(users.map((u, i) => observed<unknown>(
       i % 2 ? payments.prepare(u, randomUUID(), f.dto) : orders.purchase(u, randomUUID(), f.dto),
     )));
     expect(responses.filter((r) => r.ok)).toHaveLength(1);
-    for (const r of responses) if (!r.ok) {
+    for (const r of responses) if (r.ok === false) {
       expect(r.error.getStatus()).toBe(409);
       expect(r.error.message).toBe('남은 수량이 부족합니다');
     }

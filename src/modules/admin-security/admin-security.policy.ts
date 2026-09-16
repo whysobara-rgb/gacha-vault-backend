@@ -2,7 +2,8 @@ import { createHash, createHmac, timingSafeEqual } from 'crypto';
 import { HttpException } from '@nestjs/common';
 
 export const adminError = (code: string, status = 401) => new HttpException({ message: '관리자 추가 인증을 확인해주세요', code }, status);
-export const adminMfaRequired = () => process.env.NODE_ENV === 'production' || process.env.ENABLE_ADMIN_MFA_PREVIEW === 'true';
+// Only explicit development/test may omit enforcement. Missing or misspelled env fails closed.
+export const adminMfaRequired = () => !['development','test'].includes(process.env.NODE_ENV ?? '') || process.env.ENABLE_ADMIN_MFA_PREVIEW === 'true';
 export const fingerprint = (text: string) => createHash('sha256').update(text).digest('hex');
 export const administrativePath = (path: string) => /^\/(owner|ops|staff)(\/|$)/.test(path);
 export const stateKey = (id: number) => {
@@ -16,7 +17,7 @@ export function decodeBase32(secret: string): Buffer {
     value = (value << 5) | 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'.indexOf(c); bits += 5;
     if (bits >= 8) { bits -= 8; bytes.push((value >>> bits) & 255); value &= (1 << bits) - 1; }
   }
-  if (value !== 0 || bytes.length < 20 || bytes.length > 64) throw adminError('MFA_CONFIGURATION_REQUIRED', 503);
+  if (value !== 0 || bytes.length < 20 || bytes.length > 64 || Math.ceil(bytes.length * 8 / 5) !== secret.length) throw adminError('MFA_CONFIGURATION_REQUIRED', 503);
   return Buffer.from(bytes);
 }
 /** RFC 4226/6238, SHA-1, 30-second step. No application clock is used by the verifier. */

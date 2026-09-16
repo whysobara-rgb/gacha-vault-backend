@@ -18,7 +18,7 @@ Linux/macOS 또는 Windows의 별도 승인된 WSL 환경에서 Node22, 해당 �
 
 ## 안전성과 범위
 
-네이티브 pg_dump custom 형식을 age로 파이프 암호화한다. 복호화되지 않은 dump 파일을 디스크에 쓰거나 stdout으로 노출하지 않는다. 암호화 프로세스에는 DB 비밀번호를 전달하지 않는다. 원본은 READ ONLY REPEATABLE READ로 읽고 pg_export_snapshot을 pg_dump --snapshot에 전달하므로 manifest 테이블 건수와 덤프가 같은 MVCC 시점을 사용한다. 시퀀스는 PostgreSQL 특성상 MVCC 대상이 아니므로 계속 쓰는 서비스의 모든 상태가 한 물리 시점으로 고정됐다는 뜻은 아니다.
+네이티브 pg_dump custom 형식을 age로 파이프 암호화한다. 암호화되지 않은 평문 dump 파일을 디스크에 저장하거나 터미널 출력으로 노출하지 않는다. 암호문과 건수 등 메타데이터 manifest만 보호된 폴더에 저장한다. 프로세스 파이프와 메모리에는 원본 바이트가 존재하므로 신뢰할 수 있는 OS·사용자 계정이 전제다. 암호화 프로세스에는 DB 비밀번호를 전달하지 않는다. 원본은 READ ONLY REPEATABLE READ로 읽고 pg_export_snapshot을 pg_dump --snapshot에 전달하므로 manifest 테이블 건수와 덤프가 같은 MVCC 시점을 사용한다. 시퀀스는 PostgreSQL 특성상 MVCC 대상이 아니므로 계속 쓰는 서비스의 모든 상태가 한 물리 시점으로 고정됐다는 뜻은 아니다.
 
 키 형식·보호 폴더·대상 확인이 틀리거나 export/encryption이 실패하면 성공 manifest를 만들지 않는다. 원시 오류·경고는 비공개 내용일 수 있어 콘솔에 복사하지 않는다. 도구가 stderr를 출력한 경우는 수동 비공개 검토 대상으로 중단한다. 강제 프로세스 종료 시 .partial 암호문은 남을 수 있으며 복원 가능한 완료 백업으로 취급하지 않는다. 원본 DB는 변경하지 않는다.
 

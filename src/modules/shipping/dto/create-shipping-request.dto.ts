@@ -1,6 +1,9 @@
 import { Type } from 'class-transformer';
 import {
   ArrayMinSize,
+  ArrayMaxSize,
+  ArrayUnique,
+  Min,
   ArrayNotEmpty,
   IsArray,
   IsInt,
@@ -36,7 +39,10 @@ export class CreateShippingRequestDto {
   @IsArray()
   @ArrayNotEmpty()
   @ArrayMinSize(1)
+  @ArrayMaxSize(100)
+  @ArrayUnique()
   @Type(() => Number)
   @IsInt({ each: true })
+  @Min(1, { each: true })
   inventoryItemIds: number[];
 }

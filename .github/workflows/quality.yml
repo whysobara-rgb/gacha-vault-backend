@@ -1,0 +1,55 @@
+name: Backend quality
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm run build
+      - run: npm run check:types
+      - run: npm test -- --runInBand
+  postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: gacha_ci
+          POSTGRES_PASSWORD: local-ci-only
+          POSTGRES_DB: gacha_integration_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U gacha_ci -d gacha_integration_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm run build
+      - run: npm run migration:run:compiled
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: '5432'
+          DB_USERNAME: gacha_ci
+          DB_PASSWORD: local-ci-only
+          DB_DATABASE: gacha_integration_test
+      - run: npm run test:postgres
+        env:
+          TEST_POSTGRES: 'true'
+          NODE_ENV: test

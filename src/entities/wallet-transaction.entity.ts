@@ -45,6 +45,9 @@ export class WalletTransaction {
   @Column({ type: 'bigint' })
   balanceAfter: number;
 
+  @Column({ type: 'varchar', length: 32, default: 'LEGACY' })
+  origin: string;
+
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 }

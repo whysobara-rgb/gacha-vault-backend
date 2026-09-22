@@ -33,11 +33,28 @@ export class Item {
   @Column({ type: 'text', nullable: true })
   imageUrl: string;
 
+  @Column({ type: 'boolean', nullable: true })
+  isPremium: boolean | null;
+
+  @Column({ type: 'integer', nullable: true })
+  conversionGP: number | null;
+
   @OneToMany(() => GachaItem, (gachaItem) => gachaItem.item)
   gachaItems: GachaItem[];
 
   @OneToMany(() => InventoryItem, (inventoryItem) => inventoryItem.item)
   inventoryItems: InventoryItem[];
+
+  @Column({
+    name: 'fulfillment_type',
+    type: 'varchar',
+    length: 16,
+    default: 'UNSPECIFIED',
+  })
+  fulfillmentType: string;
+
+  @Column({ name: 'shipping_enabled', type: 'boolean', default: false })
+  shippingEnabled: boolean;
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;

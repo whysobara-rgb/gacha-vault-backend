@@ -1,0 +1,4861 @@
+{
+  "queries": {
+    "constraints": "SELECT n.nspname AS schema_name,c.relname AS table_name,x.conname AS constraint_name,x.contype AS type,ARRAY(SELECT a.attname FROM unnest(x.conkey) WITH ORDINALITY k(n,i) JOIN pg_attribute a ON a.attrelid=x.conrelid AND a.attnum=k.n ORDER BY k.i) AS columns,rn.nspname AS ref_schema,rc.relname AS ref_table,ARRAY(SELECT a.attname FROM unnest(x.confkey) WITH ORDINALITY k(n,i) JOIN pg_attribute a ON a.attrelid=x.confrelid AND a.attnum=k.n ORDER BY k.i) AS ref_columns,x.confupdtype AS update_action,x.confdeltype AS delete_action,x.confmatchtype AS match_type,x.condeferrable AS deferrable,x.condeferred AS deferred,x.convalidated AS validated,pg_get_constraintdef(x.oid,true) AS definition FROM pg_constraint x JOIN pg_class c ON c.oid=x.conrelid JOIN pg_namespace n ON n.oid=c.relnamespace LEFT JOIN pg_class rc ON rc.oid=x.confrelid LEFT JOIN pg_namespace rn ON rn.oid=rc.relnamespace WHERE n.nspname='public' AND c.relname<>'migrations' AND x.contype IN('p','f','u','c','x') ORDER BY c.relname,x.conname",
+    "triggers": "SELECT n.nspname AS schema_name,c.relname AS table_name,t.tgname AS name,t.tgtype AS type,p.proname AS function_name,t.tgenabled AS enabled,pg_get_triggerdef(t.oid,true) AS definition,p.prosrc AS function_body FROM pg_trigger t JOIN pg_class c ON c.oid=t.tgrelid JOIN pg_proc p ON p.oid=t.tgfoid JOIN pg_namespace n ON n.oid=c.relnamespace WHERE NOT t.tgisinternal AND n.nspname='public' ORDER BY c.relname,t.tgname",
+    "uniqueIndexes": "SELECT c.relname AS table_name,i.relname AS name,pg_get_indexdef(x.indexrelid) AS definition FROM pg_index x JOIN pg_class c ON c.oid=x.indrelid JOIN pg_class i ON i.oid=x.indexrelid JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND x.indisunique AND NOT EXISTS(SELECT 1 FROM pg_constraint k WHERE k.conindid=x.indexrelid) ORDER BY c.relname,i.relname",
+    "tables": "SELECT schemaname AS schema_name,tablename AS name FROM pg_tables WHERE schemaname='public' AND tablename<>'migrations' ORDER BY tablename"
+  },
+  "expected": {
+    "constraints": [
+      {
+        "schema_name": "public",
+        "table_name": "account_closure_requests",
+        "constraint_name": "account_closure_requests_check",
+        "type": "c",
+        "columns": [
+          "status",
+          "cancelled_at"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK ((status::text = 'CANCELLED'::text) = (cancelled_at IS NOT NULL))"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "account_closure_requests",
+        "constraint_name": "account_closure_requests_pkey",
+        "type": "p",
+        "columns": [
+          "id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "account_closure_requests",
+        "constraint_name": "account_closure_requests_status_check",
+        "type": "c",
+        "columns": [
+          "status"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (status::text = ANY (ARRAY['REQUESTED'::character varying, 'CANCELLED'::character varying]::text[]))"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "account_closure_requests",
+        "constraint_name": "account_closure_requests_user_id_fkey",
+        "type": "f",
+        "columns": [
+          "user_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "users",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "r",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "account_closure_requests",
+        "constraint_name": "account_closure_requests_user_id_idempotency_key_key",
+        "type": "u",
+        "columns": [
+          "user_id",
+          "idempotency_key"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "UNIQUE (user_id, idempotency_key)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "account_security_events",
+        "constraint_name": "account_security_events_pkey",
+        "type": "p",
+        "columns": [
+          "id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "account_security_events",
+        "constraint_name": "account_security_events_user_id_fkey",
+        "type": "f",
+        "columns": [
+          "user_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "users",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "r",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "announcement_reads",
+        "constraint_name": "announcement_reads_announcement_id_fkey",
+        "type": "f",
+        "columns": [
+          "announcement_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "announcements",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "r",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (announcement_id) REFERENCES announcements(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "announcement_reads",
+        "constraint_name": "announcement_reads_pkey",
+        "type": "p",
+        "columns": [
+          "user_id",
+          "announcement_id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "PRIMARY KEY (user_id, announcement_id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "announcement_reads",
+        "constraint_name": "announcement_reads_user_id_fkey",
+        "type": "f",
+        "columns": [
+          "user_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "users",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "r",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "announcements",
+        "constraint_name": "announcements_body_check",
+        "type": "c",
+        "columns": [
+          "body"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (length(body) >= 1 AND length(body) <= 5000)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "announcements",
+        "constraint_name": "announcements_category_check",
+        "type": "c",
+        "columns": [
+          "category"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (category::text = ANY (ARRAY['NOTICE'::character varying, 'MAINTENANCE'::character varying]::text[]))"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "announcements",
+        "constraint_name": "announcements_pkey",
+        "type": "p",
+        "columns": [
+          "id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "announcements",
+        "constraint_name": "announcements_status_check",
+        "type": "c",
+        "columns": [
+          "status"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (status::text = ANY (ARRAY['DRAFT'::character varying, 'PUBLISHED'::character varying, 'ARCHIVED'::character varying]::text[]))"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "announcements",
+        "constraint_name": "announcements_version_check",
+        "type": "c",
+        "columns": [
+          "version"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (version > 0)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "app_notifications",
+        "constraint_name": "app_notifications_kind_check",
+        "type": "c",
+        "columns": [
+          "kind"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (kind::text = ANY (ARRAY['SHIPMENT_UPDATE'::character varying, 'SUPPORT_REPLY'::character varying]::text[]))"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "app_notifications",
+        "constraint_name": "app_notifications_pkey",
+        "type": "p",
+        "columns": [
+          "id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "app_notifications",
+        "constraint_name": "app_notifications_user_id_fkey",
+        "type": "f",
+        "columns": [
+          "user_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "users",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "r",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "app_notifications",
+        "constraint_name": "app_notifications_user_id_source_key_key",
+        "type": "u",
+        "columns": [
+          "user_id",
+          "source_key"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "UNIQUE (user_id, source_key)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "auth_challenges",
+        "constraint_name": "auth_challenges_pkey",
+        "type": "p",
+        "columns": [
+          "id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "auth_challenges",
+        "constraint_name": "auth_challenges_purpose_check",
+        "type": "c",
+        "columns": [
+          "purpose"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (purpose::text = ANY (ARRAY['RESET'::character varying, 'VERIFY'::character varying]::text[]))"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "auth_challenges",
+        "constraint_name": "auth_challenges_token_hash_key",
+        "type": "u",
+        "columns": [
+          "token_hash"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "UNIQUE (token_hash)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "auth_challenges",
+        "constraint_name": "auth_challenges_user_id_fkey",
+        "type": "f",
+        "columns": [
+          "user_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "users",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "r",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "auth_mail_jobs",
+        "constraint_name": "auth_mail_jobs_attempts_check",
+        "type": "c",
+        "columns": [
+          "attempts"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (attempts >= 0 AND attempts <= 6)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "auth_mail_jobs",
+        "constraint_name": "auth_mail_jobs_challenge_id_fkey",
+        "type": "f",
+        "columns": [
+          "challenge_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "auth_challenges",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "r",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (challenge_id) REFERENCES auth_challenges(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "auth_mail_jobs",
+        "constraint_name": "auth_mail_jobs_check",
+        "type": "c",
+        "columns": [
+          "status",
+          "payload"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK ((status::text = ANY (ARRAY['SENT'::character varying, 'FAILED'::character varying, 'CANCELLED'::character varying]::text[])) = (payload IS NULL))"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "auth_mail_jobs",
+        "constraint_name": "auth_mail_jobs_kind_check",
+        "type": "c",
+        "columns": [
+          "kind"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (kind::text = ANY (ARRAY['RESET'::character varying, 'VERIFY'::character varying, 'RESET_COMPLETE'::character varying]::text[]))"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "auth_mail_jobs",
+        "constraint_name": "auth_mail_jobs_pkey",
+        "type": "p",
+        "columns": [
+          "id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "auth_mail_jobs",
+        "constraint_name": "auth_mail_jobs_status_check",
+        "type": "c",
+        "columns": [
+          "status"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (status::text = ANY (ARRAY['PENDING'::character varying, 'PROCESSING'::character varying, 'SENT'::character varying, 'FAILED'::character varying, 'CANCELLED'::character varying]::text[]))"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "auth_recovery_limits",
+        "constraint_name": "auth_recovery_limits_pkey",
+        "type": "p",
+        "columns": [
+          "bucket_hash"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "PRIMARY KEY (bucket_hash)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "capsule_openings",
+        "constraint_name": "capsule_openings_capsule_id_fkey",
+        "type": "f",
+        "columns": [
+          "capsule_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "owned_capsules",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "r",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (capsule_id) REFERENCES owned_capsules(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "capsule_openings",
+        "constraint_name": "capsule_openings_inventory_item_id_fkey",
+        "type": "f",
+        "columns": [
+          "inventory_item_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "inventory_items",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "r",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (inventory_item_id) REFERENCES inventory_items(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "capsule_openings",
+        "constraint_name": "capsule_openings_inventory_item_id_key",
+        "type": "u",
+        "columns": [
+          "inventory_item_id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "UNIQUE (inventory_item_id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "capsule_openings",
+        "constraint_name": "capsule_openings_pkey",
+        "type": "p",
+        "columns": [
+          "capsule_id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "PRIMARY KEY (capsule_id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "capsule_openings",
+        "constraint_name": "capsule_openings_probability_version_check",
+        "type": "c",
+        "columns": [
+          "probability_version"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (probability_version::text ~ '^[a-f0-9]{64}$'::text)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "capsule_openings",
+        "constraint_name": "capsule_openings_ticket_check",
+        "type": "c",
+        "columns": [
+          "ticket"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (ticket >= 0 AND ticket < 1000000)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "capsule_orders",
+        "constraint_name": "capsule_orders_balance_after_check",
+        "type": "c",
+        "columns": [
+          "balance_after"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (balance_after >= 0)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "capsule_orders",
+        "constraint_name": "capsule_orders_check",
+        "type": "c",
+        "columns": [
+          "total",
+          "unit_price",
+          "quantity"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (total > 0 AND total::bigint = (unit_price::bigint * quantity))"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "capsule_orders",
+        "constraint_name": "capsule_orders_check1",
+        "type": "c",
+        "columns": [
+          "refunded_quantity",
+          "quantity"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (refunded_quantity >= 0 AND refunded_quantity <= quantity)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "capsule_orders",
+        "constraint_name": "capsule_orders_currency_check",
+        "type": "c",
+        "columns": [
+          "currency"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (currency::text = ANY (ARRAY['GP'::character varying, 'KRW'::character varying]::text[]))"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "capsule_orders",
+        "constraint_name": "capsule_orders_gacha_id_fkey",
+        "type": "f",
+        "columns": [
+          "gacha_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "gachas",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "r",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (gacha_id) REFERENCES gachas(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "capsule_orders",
+        "constraint_name": "capsule_orders_pkey",
+        "type": "p",
+        "columns": [
+          "id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "capsule_orders",
+        "constraint_name": "capsule_orders_quantity_check",
+        "type": "c",
+        "columns": [
+          "quantity"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (quantity >= 1 AND quantity <= 100)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "capsule_orders",
+        "constraint_name": "capsule_orders_status_check",
+        "type": "c",
+        "columns": [
+          "status"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (status::text = ANY (ARRAY['PAID'::character varying, 'PARTIALLY_REFUNDED'::character varying, 'REFUNDED'::character varying]::text[]))"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "capsule_orders",
+        "constraint_name": "capsule_orders_unit_price_check",
+        "type": "c",
+        "columns": [
+          "unit_price"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (unit_price > 0)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "capsule_orders",
+        "constraint_name": "capsule_orders_user_id_fkey",
+        "type": "f",
+        "columns": [
+          "user_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "users",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "r",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "capsule_orders",
+        "constraint_name": "capsule_orders_user_id_idempotency_key_key",
+        "type": "u",
+        "columns": [
+          "user_id",
+          "idempotency_key"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "UNIQUE (user_id, idempotency_key)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "capsule_orders",
+        "constraint_name": "capsule_orders_wallet_transaction_id_fkey",
+        "type": "f",
+        "columns": [
+          "wallet_transaction_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "wallet_transactions",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "r",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (wallet_transaction_id) REFERENCES wallet_transactions(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "capsule_orders",
+        "constraint_name": "capsule_orders_wallet_transaction_id_key",
+        "type": "u",
+        "columns": [
+          "wallet_transaction_id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "UNIQUE (wallet_transaction_id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "capsule_orders",
+        "constraint_name": "order_probability_pair",
+        "type": "c",
+        "columns": [
+          "probability_snapshot",
+          "probability_version"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (probability_snapshot IS NULL AND probability_version IS NULL OR probability_snapshot IS NOT NULL AND probability_version IS NOT NULL AND probability_version::text ~ '^[a-f0-9]{64}$'::text)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "capsule_orders",
+        "constraint_name": "order_wallet_currency",
+        "type": "c",
+        "columns": [
+          "currency",
+          "wallet_transaction_id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (currency::text = 'GP'::text AND wallet_transaction_id IS NOT NULL OR currency::text = 'KRW'::text AND wallet_transaction_id IS NULL)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "catalog_drafts",
+        "constraint_name": "catalog_drafts_gacha_id_fkey",
+        "type": "f",
+        "columns": [
+          "gacha_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "gachas",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "r",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (gacha_id) REFERENCES gachas(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "catalog_drafts",
+        "constraint_name": "catalog_drafts_pkey",
+        "type": "p",
+        "columns": [
+          "gacha_id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "PRIMARY KEY (gacha_id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "catalog_drafts",
+        "constraint_name": "catalog_drafts_version_check",
+        "type": "c",
+        "columns": [
+          "version"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (version > 0)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "draws",
+        "constraint_name": "FK_a007b5fcfacc4c897279171f8f5",
+        "type": "f",
+        "columns": [
+          "gacha_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "gachas",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "r",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (gacha_id) REFERENCES gachas(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "draws",
+        "constraint_name": "FK_d900649d89d893ef12942aa7bf4",
+        "type": "f",
+        "columns": [
+          "user_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "users",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "c",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "draws",
+        "constraint_name": "PK_abe4e6df5ea65731c53b968f8d1",
+        "type": "p",
+        "columns": [
+          "id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "fulfillment_order_items",
+        "constraint_name": "fulfillment_order_items_fulfillment_id_fkey",
+        "type": "f",
+        "columns": [
+          "fulfillment_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "fulfillment_orders",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "r",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (fulfillment_id) REFERENCES fulfillment_orders(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "fulfillment_order_items",
+        "constraint_name": "fulfillment_order_items_inventory_item_id_fkey",
+        "type": "f",
+        "columns": [
+          "inventory_item_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "inventory_items",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "r",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (inventory_item_id) REFERENCES inventory_items(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "fulfillment_order_items",
+        "constraint_name": "fulfillment_order_items_pkey",
+        "type": "p",
+        "columns": [
+          "fulfillment_id",
+          "inventory_item_id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "PRIMARY KEY (fulfillment_id, inventory_item_id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "fulfillment_orders",
+        "constraint_name": "fulfillment_orders_balance_after_check",
+        "type": "c",
+        "columns": [
+          "balance_after"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (balance_after >= 0)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "fulfillment_orders",
+        "constraint_name": "fulfillment_orders_cancel_wallet_transaction_id_fkey",
+        "type": "f",
+        "columns": [
+          "cancel_wallet_transaction_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "wallet_transactions",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "r",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (cancel_wallet_transaction_id) REFERENCES wallet_transactions(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "fulfillment_orders",
+        "constraint_name": "fulfillment_orders_cancel_wallet_transaction_id_key",
+        "type": "u",
+        "columns": [
+          "cancel_wallet_transaction_id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "UNIQUE (cancel_wallet_transaction_id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "fulfillment_orders",
+        "constraint_name": "fulfillment_orders_check",
+        "type": "c",
+        "columns": [
+          "status",
+          "cancel_wallet_transaction_id",
+          "cancelled_balance_after",
+          "cancelled_at"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (status::text = 'CANCELLED'::text AND cancel_wallet_transaction_id IS NOT NULL AND cancelled_balance_after IS NOT NULL AND cancelled_balance_after >= 0 AND cancelled_at IS NOT NULL OR status::text <> 'CANCELLED'::text AND cancel_wallet_transaction_id IS NULL AND cancelled_balance_after IS NULL AND cancelled_at IS NULL)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "fulfillment_orders",
+        "constraint_name": "fulfillment_orders_fee_gp_check",
+        "type": "c",
+        "columns": [
+          "fee_gp"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (fee_gp >= 0)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "fulfillment_orders",
+        "constraint_name": "fulfillment_orders_operations_version_check",
+        "type": "c",
+        "columns": [
+          "operations_version"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (operations_version > 0)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "fulfillment_orders",
+        "constraint_name": "fulfillment_orders_pkey",
+        "type": "p",
+        "columns": [
+          "id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "fulfillment_orders",
+        "constraint_name": "fulfillment_orders_quote_id_fkey",
+        "type": "f",
+        "columns": [
+          "quote_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "fulfillment_quotes",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "r",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (quote_id) REFERENCES fulfillment_quotes(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "fulfillment_orders",
+        "constraint_name": "fulfillment_orders_quote_id_key",
+        "type": "u",
+        "columns": [
+          "quote_id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "UNIQUE (quote_id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "fulfillment_orders",
+        "constraint_name": "fulfillment_orders_status_check",
+        "type": "c",
+        "columns": [
+          "status"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (status::text = ANY (ARRAY['REQUESTED'::character varying, 'PREPARING'::character varying, 'COLLECTED'::character varying, 'SHIPPING'::character varying, 'DELIVERED'::character varying, 'CANCELLED'::character varying]::text[]))"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "fulfillment_orders",
+        "constraint_name": "fulfillment_orders_user_id_fkey",
+        "type": "f",
+        "columns": [
+          "user_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "users",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "r",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "fulfillment_orders",
+        "constraint_name": "fulfillment_orders_user_id_idempotency_key_key",
+        "type": "u",
+        "columns": [
+          "user_id",
+          "idempotency_key"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "UNIQUE (user_id, idempotency_key)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "fulfillment_orders",
+        "constraint_name": "fulfillment_orders_wallet_transaction_id_fkey",
+        "type": "f",
+        "columns": [
+          "wallet_transaction_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "wallet_transactions",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "r",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (wallet_transaction_id) REFERENCES wallet_transactions(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "fulfillment_orders",
+        "constraint_name": "fulfillment_orders_wallet_transaction_id_key",
+        "type": "u",
+        "columns": [
+          "wallet_transaction_id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "UNIQUE (wallet_transaction_id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "fulfillment_orders",
+        "constraint_name": "fulfillment_tracking_pair",
+        "type": "c",
+        "columns": [
+          "carrier",
+          "tracking_number"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (carrier IS NULL AND tracking_number IS NULL OR (carrier::text = ANY (ARRAY['CJ'::character varying, 'HANJIN'::character varying, 'LOTTE'::character varying, 'POST'::character varying, 'LOGEN'::character varying, 'OTHER'::character varying]::text[])) AND tracking_number::text ~ '^[A-Za-z0-9-]{5,40}$'::text)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "fulfillment_quotes",
+        "constraint_name": "fulfillment_quotes_fee_gp_check",
+        "type": "c",
+        "columns": [
+          "fee_gp"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (fee_gp >= 0)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "fulfillment_quotes",
+        "constraint_name": "fulfillment_quotes_inventory_item_ids_check",
+        "type": "c",
+        "columns": [
+          "inventory_item_ids"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (cardinality(inventory_item_ids) >= 1 AND cardinality(inventory_item_ids) <= 100)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "fulfillment_quotes",
+        "constraint_name": "fulfillment_quotes_pkey",
+        "type": "p",
+        "columns": [
+          "id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "fulfillment_quotes",
+        "constraint_name": "fulfillment_quotes_user_id_fkey",
+        "type": "f",
+        "columns": [
+          "user_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "users",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "r",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "gacha_items",
+        "constraint_name": "FK_20f9d4bc9466991027cb45b1864",
+        "type": "f",
+        "columns": [
+          "item_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "items",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "c",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "gacha_items",
+        "constraint_name": "FK_bbb467c846ab732613793e8c0ff",
+        "type": "f",
+        "columns": [
+          "gacha_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "gachas",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "c",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (gacha_id) REFERENCES gachas(id) ON DELETE CASCADE"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "gacha_items",
+        "constraint_name": "PK_5129d1aaafa03735a6f4e1585fc",
+        "type": "p",
+        "columns": [
+          "id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "gacha_items",
+        "constraint_name": "gacha_items_probabilityPpm_check",
+        "type": "c",
+        "columns": [
+          "probabilityPpm"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (\"probabilityPpm\" >= 1 AND \"probabilityPpm\" <= 1000000)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "gachas",
+        "constraint_name": "PK_bb7255092511fdbeeb81db1c067",
+        "type": "p",
+        "columns": [
+          "id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "gachas",
+        "constraint_name": "cash_price_required",
+        "type": "c",
+        "columns": [
+          "cash_enabled",
+          "cash_unit_price"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (NOT cash_enabled OR cash_unit_price IS NOT NULL)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "gachas",
+        "constraint_name": "gachas_cash_unit_price_check",
+        "type": "c",
+        "columns": [
+          "cash_unit_price"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (cash_unit_price >= 100)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "gachas",
+        "constraint_name": "gachas_category_check",
+        "type": "c",
+        "columns": [
+          "category"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (category::text = ANY (ARRAY['tech'::character varying, 'home'::character varying, 'luxury'::character varying, 'fashion'::character varying, 'food'::character varying, 'other'::character varying]::text[]))"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "gachas",
+        "constraint_name": "gachas_sale_type_check",
+        "type": "c",
+        "columns": [
+          "sale_type"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (sale_type::text = ANY (ARRAY['STANDARD'::character varying, 'EVENT'::character varying, 'UNSPECIFIED'::character varying]::text[]))"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "inventory_conversion_items",
+        "constraint_name": "inventory_conversion_items_amount_gp_check",
+        "type": "c",
+        "columns": [
+          "amount_gp"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (amount_gp > 0)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "inventory_conversion_items",
+        "constraint_name": "inventory_conversion_items_conversion_id_fkey",
+        "type": "f",
+        "columns": [
+          "conversion_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "inventory_conversions",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "r",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (conversion_id) REFERENCES inventory_conversions(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "inventory_conversion_items",
+        "constraint_name": "inventory_conversion_items_inventory_item_id_fkey",
+        "type": "f",
+        "columns": [
+          "inventory_item_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "inventory_items",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "r",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (inventory_item_id) REFERENCES inventory_items(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "inventory_conversion_items",
+        "constraint_name": "inventory_conversion_items_pkey",
+        "type": "p",
+        "columns": [
+          "conversion_id",
+          "inventory_item_id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "PRIMARY KEY (conversion_id, inventory_item_id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "inventory_conversions",
+        "constraint_name": "inventory_conversions_balance_after_check",
+        "type": "c",
+        "columns": [
+          "balance_after"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (balance_after >= 0)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "inventory_conversions",
+        "constraint_name": "inventory_conversions_check",
+        "type": "c",
+        "columns": [
+          "status",
+          "restored_at",
+          "restore_wallet_transaction_id",
+          "restored_balance_after"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (status::text = 'CONVERTED'::text AND restored_at IS NULL AND restore_wallet_transaction_id IS NULL AND restored_balance_after IS NULL OR status::text = 'RESTORED'::text AND restored_at IS NOT NULL AND restore_wallet_transaction_id IS NOT NULL AND restored_balance_after >= 0)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "inventory_conversions",
+        "constraint_name": "inventory_conversions_pkey",
+        "type": "p",
+        "columns": [
+          "id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "inventory_conversions",
+        "constraint_name": "inventory_conversions_restore_wallet_transaction_id_fkey",
+        "type": "f",
+        "columns": [
+          "restore_wallet_transaction_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "wallet_transactions",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "r",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (restore_wallet_transaction_id) REFERENCES wallet_transactions(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "inventory_conversions",
+        "constraint_name": "inventory_conversions_restore_wallet_transaction_id_key",
+        "type": "u",
+        "columns": [
+          "restore_wallet_transaction_id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "UNIQUE (restore_wallet_transaction_id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "inventory_conversions",
+        "constraint_name": "inventory_conversions_spend_version_check",
+        "type": "c",
+        "columns": [
+          "spend_version"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (spend_version >= 0)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "inventory_conversions",
+        "constraint_name": "inventory_conversions_status_check",
+        "type": "c",
+        "columns": [
+          "status"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (status::text = ANY (ARRAY['CONVERTED'::character varying, 'RESTORED'::character varying]::text[]))"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "inventory_conversions",
+        "constraint_name": "inventory_conversions_total_gp_check",
+        "type": "c",
+        "columns": [
+          "total_gp"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (total_gp > 0)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "inventory_conversions",
+        "constraint_name": "inventory_conversions_user_id_fkey",
+        "type": "f",
+        "columns": [
+          "user_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "users",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "r",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "inventory_conversions",
+        "constraint_name": "inventory_conversions_user_id_idempotency_key_key",
+        "type": "u",
+        "columns": [
+          "user_id",
+          "idempotency_key"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "UNIQUE (user_id, idempotency_key)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "inventory_conversions",
+        "constraint_name": "inventory_conversions_wallet_transaction_id_fkey",
+        "type": "f",
+        "columns": [
+          "wallet_transaction_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "wallet_transactions",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "r",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (wallet_transaction_id) REFERENCES wallet_transactions(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "inventory_conversions",
+        "constraint_name": "inventory_conversions_wallet_transaction_id_key",
+        "type": "u",
+        "columns": [
+          "wallet_transaction_id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "UNIQUE (wallet_transaction_id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "inventory_items",
+        "constraint_name": "FK_6c06346f7daad6d05f3cdb95026",
+        "type": "f",
+        "columns": [
+          "item_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "items",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "r",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "inventory_items",
+        "constraint_name": "FK_9368646c6eb55675ed34699583b",
+        "type": "f",
+        "columns": [
+          "user_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "users",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "c",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "inventory_items",
+        "constraint_name": "FK_cfd8dfc5e7a565c9891db8f6f98",
+        "type": "f",
+        "columns": [
+          "draw_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "draws",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "a",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (draw_id) REFERENCES draws(id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "inventory_items",
+        "constraint_name": "PK_cf2f451407242e132547ac19169",
+        "type": "p",
+        "columns": [
+          "id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "inventory_items",
+        "constraint_name": "REL_cfd8dfc5e7a565c9891db8f6f9",
+        "type": "u",
+        "columns": [
+          "draw_id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "UNIQUE (draw_id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "inventory_items",
+        "constraint_name": "inventory_status_v2",
+        "type": "c",
+        "columns": [
+          "status"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (status::text = ANY (ARRAY['STORED'::character varying, 'CONVERTED'::character varying, 'SHIPPING_REQUESTED'::character varying, 'SHIPPING'::character varying, 'DELIVERED'::character varying]::text[]))"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "items",
+        "constraint_name": "PK_ba5885359424c15ca6b9e79bcf6",
+        "type": "p",
+        "columns": [
+          "id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "items",
+        "constraint_name": "items_conversionGP_check",
+        "type": "c",
+        "columns": [
+          "conversionGP"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (\"conversionGP\" >= 0)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "items",
+        "constraint_name": "items_fulfillment_type_check",
+        "type": "c",
+        "columns": [
+          "fulfillment_type"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (fulfillment_type::text = ANY (ARRAY['PHYSICAL'::character varying, 'DIGITAL'::character varying, 'MANUAL'::character varying, 'UNSPECIFIED'::character varying]::text[]))"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "items",
+        "constraint_name": "items_warehouse_link_version_check",
+        "type": "c",
+        "columns": [
+          "warehouse_link_version"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (warehouse_link_version >= 0)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "items",
+        "constraint_name": "items_warehouse_sku_id_fkey",
+        "type": "f",
+        "columns": [
+          "warehouse_sku_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "warehouse_skus",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "r",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (warehouse_sku_id) REFERENCES warehouse_skus(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "operations_events",
+        "constraint_name": "operations_events_actor_id_fkey",
+        "type": "f",
+        "columns": [
+          "actor_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "users",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "r",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (actor_id) REFERENCES users(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "operations_events",
+        "constraint_name": "operations_events_pkey",
+        "type": "p",
+        "columns": [
+          "id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "operations_events",
+        "constraint_name": "operations_events_target_type_check",
+        "type": "c",
+        "columns": [
+          "target_type"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (target_type::text = ANY (ARRAY['CATALOG'::character varying, 'FULFILLMENT'::character varying, 'WAREHOUSE'::character varying, 'ANNOUNCEMENTS'::character varying, 'OWNER'::character varying]::text[]))"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "operations_permissions",
+        "constraint_name": "operations_permissions_permission_check",
+        "type": "c",
+        "columns": [
+          "permission"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (permission::text = ANY (ARRAY['CATALOG'::character varying, 'FULFILLMENT'::character varying, 'WAREHOUSE'::character varying, 'ANNOUNCEMENTS'::character varying, 'OWNER'::character varying]::text[]))"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "operations_permissions",
+        "constraint_name": "operations_permissions_pkey",
+        "type": "p",
+        "columns": [
+          "user_id",
+          "permission"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "PRIMARY KEY (user_id, permission)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "operations_permissions",
+        "constraint_name": "operations_permissions_user_id_fkey",
+        "type": "f",
+        "columns": [
+          "user_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "users",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "r",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "operations_requests",
+        "constraint_name": "operations_requests_actor_id_fkey",
+        "type": "f",
+        "columns": [
+          "actor_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "users",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "r",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (actor_id) REFERENCES users(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "operations_requests",
+        "constraint_name": "operations_requests_pkey",
+        "type": "p",
+        "columns": [
+          "actor_id",
+          "request_key"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "PRIMARY KEY (actor_id, request_key)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "order_prize_refs",
+        "constraint_name": "order_prize_refs_item_id_fkey",
+        "type": "f",
+        "columns": [
+          "item_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "items",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "r",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "order_prize_refs",
+        "constraint_name": "order_prize_refs_order_id_fkey",
+        "type": "f",
+        "columns": [
+          "order_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "capsule_orders",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "c",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (order_id) REFERENCES capsule_orders(id) ON DELETE CASCADE"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "order_prize_refs",
+        "constraint_name": "order_prize_refs_pkey",
+        "type": "p",
+        "columns": [
+          "order_id",
+          "item_id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "PRIMARY KEY (order_id, item_id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "order_refunds",
+        "constraint_name": "order_refunds_amount_check",
+        "type": "c",
+        "columns": [
+          "amount"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (amount > 0)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "order_refunds",
+        "constraint_name": "order_refunds_capsule_ids_check",
+        "type": "c",
+        "columns": [
+          "capsule_ids"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (cardinality(capsule_ids) >= 1 AND cardinality(capsule_ids) <= 100)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "order_refunds",
+        "constraint_name": "order_refunds_check",
+        "type": "c",
+        "columns": [
+          "status",
+          "completed_at"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK ((status::text = 'SUCCEEDED'::text) = (completed_at IS NOT NULL))"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "order_refunds",
+        "constraint_name": "order_refunds_currency_check",
+        "type": "c",
+        "columns": [
+          "currency"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (currency::text = ANY (ARRAY['GP'::character varying, 'KRW'::character varying]::text[]))"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "order_refunds",
+        "constraint_name": "order_refunds_order_id_fkey",
+        "type": "f",
+        "columns": [
+          "order_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "capsule_orders",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "a",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (order_id) REFERENCES capsule_orders(id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "order_refunds",
+        "constraint_name": "order_refunds_pkey",
+        "type": "p",
+        "columns": [
+          "id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "order_refunds",
+        "constraint_name": "order_refunds_provider_cancel_id_key",
+        "type": "u",
+        "columns": [
+          "provider_cancel_id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "UNIQUE (provider_cancel_id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "order_refunds",
+        "constraint_name": "order_refunds_status_check",
+        "type": "c",
+        "columns": [
+          "status"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (status::text = ANY (ARRAY['PROCESSING'::character varying, 'UNKNOWN'::character varying, 'APPROVED'::character varying, 'SUCCEEDED'::character varying]::text[]))"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "order_refunds",
+        "constraint_name": "order_refunds_user_id_fkey",
+        "type": "f",
+        "columns": [
+          "user_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "users",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "a",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (user_id) REFERENCES users(id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "order_refunds",
+        "constraint_name": "order_refunds_user_id_idempotency_key_key",
+        "type": "u",
+        "columns": [
+          "user_id",
+          "idempotency_key"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "UNIQUE (user_id, idempotency_key)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "order_refunds",
+        "constraint_name": "order_refunds_wallet_transaction_id_fkey",
+        "type": "f",
+        "columns": [
+          "wallet_transaction_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "wallet_transactions",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "a",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (wallet_transaction_id) REFERENCES wallet_transactions(id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "order_refunds",
+        "constraint_name": "order_refunds_wallet_transaction_id_key",
+        "type": "u",
+        "columns": [
+          "wallet_transaction_id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "UNIQUE (wallet_transaction_id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "owned_capsules",
+        "constraint_name": "owned_capsules_order_id_fkey",
+        "type": "f",
+        "columns": [
+          "order_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "capsule_orders",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "r",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (order_id) REFERENCES capsule_orders(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "owned_capsules",
+        "constraint_name": "owned_capsules_order_id_sequence_key",
+        "type": "u",
+        "columns": [
+          "order_id",
+          "sequence"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "UNIQUE (order_id, sequence)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "owned_capsules",
+        "constraint_name": "owned_capsules_pkey",
+        "type": "p",
+        "columns": [
+          "id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "owned_capsules",
+        "constraint_name": "owned_capsules_sequence_check",
+        "type": "c",
+        "columns": [
+          "sequence"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (sequence >= 1 AND sequence <= 100)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "owned_capsules",
+        "constraint_name": "owned_capsules_status_check",
+        "type": "c",
+        "columns": [
+          "status"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (status::text = ANY (ARRAY['UNOPENED'::character varying, 'OPENED'::character varying, 'REFUND_PENDING'::character varying, 'REFUNDED'::character varying]::text[]))"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "owner_campaigns",
+        "constraint_name": "owner_campaigns_budget_krw_check",
+        "type": "c",
+        "columns": [
+          "budget_krw"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (budget_krw >= 0 AND budget_krw <= 100000000)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "owner_campaigns",
+        "constraint_name": "owner_campaigns_check",
+        "type": "c",
+        "columns": [
+          "ends_at",
+          "starts_at"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (ends_at > starts_at)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "owner_campaigns",
+        "constraint_name": "owner_campaigns_check1",
+        "type": "c",
+        "columns": [
+          "kind",
+          "gacha_id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK ((kind::text = 'SHOWCASE'::text) = (gacha_id IS NOT NULL))"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "owner_campaigns",
+        "constraint_name": "owner_campaigns_gacha_id_fkey",
+        "type": "f",
+        "columns": [
+          "gacha_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "gachas",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "r",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (gacha_id) REFERENCES gachas(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "owner_campaigns",
+        "constraint_name": "owner_campaigns_kind_check",
+        "type": "c",
+        "columns": [
+          "kind"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (kind::text = ANY (ARRAY['SHOWCASE'::character varying, 'NOTICE'::character varying]::text[]))"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "owner_campaigns",
+        "constraint_name": "owner_campaigns_pkey",
+        "type": "p",
+        "columns": [
+          "id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "owner_campaigns",
+        "constraint_name": "owner_campaigns_sort_order_check",
+        "type": "c",
+        "columns": [
+          "sort_order"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (sort_order >= 0 AND sort_order <= 999)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "owner_campaigns",
+        "constraint_name": "owner_campaigns_status_check",
+        "type": "c",
+        "columns": [
+          "status"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (status::text = ANY (ARRAY['DRAFT'::character varying, 'PUBLISHED'::character varying, 'PAUSED'::character varying, 'ARCHIVED'::character varying]::text[]))"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "owner_campaigns",
+        "constraint_name": "owner_campaigns_version_check",
+        "type": "c",
+        "columns": [
+          "version"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (version > 0)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "owner_cases",
+        "constraint_name": "owner_cases_kind_check",
+        "type": "c",
+        "columns": [
+          "kind"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (kind::text = ANY (ARRAY['RETURN'::character varying, 'EXCHANGE'::character varying, 'MISSING'::character varying, 'DAMAGE'::character varying, 'OTHER'::character varying]::text[]))"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "owner_cases",
+        "constraint_name": "owner_cases_order_id_fkey",
+        "type": "f",
+        "columns": [
+          "order_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "capsule_orders",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "r",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (order_id) REFERENCES capsule_orders(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "owner_cases",
+        "constraint_name": "owner_cases_pkey",
+        "type": "p",
+        "columns": [
+          "id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "owner_cases",
+        "constraint_name": "owner_cases_status_check",
+        "type": "c",
+        "columns": [
+          "status"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (status::text = ANY (ARRAY['OPEN'::character varying, 'IN_PROGRESS'::character varying, 'WAITING_EXTERNAL'::character varying, 'CLOSED'::character varying]::text[]))"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "owner_cases",
+        "constraint_name": "owner_cases_ticket_id_fkey",
+        "type": "f",
+        "columns": [
+          "ticket_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "support_tickets",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "r",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (ticket_id) REFERENCES support_tickets(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "owner_cases",
+        "constraint_name": "owner_cases_version_check",
+        "type": "c",
+        "columns": [
+          "version"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (version > 0)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "payment_intents",
+        "constraint_name": "payment_intents_check",
+        "type": "c",
+        "columns": [
+          "amount",
+          "quantity",
+          "unit_price"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (amount::bigint = (quantity::bigint * unit_price))"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "payment_intents",
+        "constraint_name": "payment_intents_check1",
+        "type": "c",
+        "columns": [
+          "status",
+          "order_id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK ((status::text = 'PAID'::text) = (order_id IS NOT NULL))"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "payment_intents",
+        "constraint_name": "payment_intents_currency_check",
+        "type": "c",
+        "columns": [
+          "currency"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (currency::text = 'KRW'::text)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "payment_intents",
+        "constraint_name": "payment_intents_gacha_id_fkey",
+        "type": "f",
+        "columns": [
+          "gacha_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "gachas",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "a",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (gacha_id) REFERENCES gachas(id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "payment_intents",
+        "constraint_name": "payment_intents_method_check",
+        "type": "c",
+        "columns": [
+          "method"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (method::text = 'CARD'::text)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "payment_intents",
+        "constraint_name": "payment_intents_order_id_fkey",
+        "type": "f",
+        "columns": [
+          "order_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "capsule_orders",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "a",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (order_id) REFERENCES capsule_orders(id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "payment_intents",
+        "constraint_name": "payment_intents_order_id_key",
+        "type": "u",
+        "columns": [
+          "order_id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "UNIQUE (order_id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "payment_intents",
+        "constraint_name": "payment_intents_pkey",
+        "type": "p",
+        "columns": [
+          "id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "payment_intents",
+        "constraint_name": "payment_intents_quantity_check",
+        "type": "c",
+        "columns": [
+          "quantity"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (quantity >= 1 AND quantity <= 100)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "payment_intents",
+        "constraint_name": "payment_intents_status_check",
+        "type": "c",
+        "columns": [
+          "status"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (status::text = ANY (ARRAY['PREPARED'::character varying, 'AUTHENTICATED'::character varying, 'CONFIRMING'::character varying, 'UNKNOWN'::character varying, 'APPROVED'::character varying, 'PAID'::character varying, 'CANCELLED'::character varying]::text[]))"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "payment_intents",
+        "constraint_name": "payment_intents_transaction_id_key",
+        "type": "u",
+        "columns": [
+          "transaction_id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "UNIQUE (transaction_id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "payment_intents",
+        "constraint_name": "payment_intents_unit_price_check",
+        "type": "c",
+        "columns": [
+          "unit_price"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (unit_price >= 100)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "payment_intents",
+        "constraint_name": "payment_intents_user_id_fkey",
+        "type": "f",
+        "columns": [
+          "user_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "users",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "a",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (user_id) REFERENCES users(id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "payment_intents",
+        "constraint_name": "payment_intents_user_id_idempotency_key_key",
+        "type": "u",
+        "columns": [
+          "user_id",
+          "idempotency_key"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "UNIQUE (user_id, idempotency_key)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "payment_prize_refs",
+        "constraint_name": "payment_prize_refs_item_id_fkey",
+        "type": "f",
+        "columns": [
+          "item_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "items",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "r",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "payment_prize_refs",
+        "constraint_name": "payment_prize_refs_payment_id_fkey",
+        "type": "f",
+        "columns": [
+          "payment_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "payment_intents",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "r",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (payment_id) REFERENCES payment_intents(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "payment_prize_refs",
+        "constraint_name": "payment_prize_refs_pkey",
+        "type": "p",
+        "columns": [
+          "payment_id",
+          "item_id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "PRIMARY KEY (payment_id, item_id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "shipping_request_items",
+        "constraint_name": "FK_664cff6f199a7283d42ef9c2943",
+        "type": "f",
+        "columns": [
+          "inventory_item_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "inventory_items",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "r",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (inventory_item_id) REFERENCES inventory_items(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "shipping_request_items",
+        "constraint_name": "FK_75b88e58a841f3321035c0e58ce",
+        "type": "f",
+        "columns": [
+          "shipping_request_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "shipping_requests",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "c",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (shipping_request_id) REFERENCES shipping_requests(id) ON DELETE CASCADE"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "shipping_request_items",
+        "constraint_name": "PK_ec247623e2fb14a4d39183bd765",
+        "type": "p",
+        "columns": [
+          "id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "shipping_requests",
+        "constraint_name": "FK_6a33b3751ed6e6f5b826ae04826",
+        "type": "f",
+        "columns": [
+          "user_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "users",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "c",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "shipping_requests",
+        "constraint_name": "PK_dda88f236216e361aeb20be4cc5",
+        "type": "p",
+        "columns": [
+          "id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "supplier_orders",
+        "constraint_name": "supplier_orders_check",
+        "type": "c",
+        "columns": [
+          "received",
+          "quantity"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (received >= 0 AND received <= quantity)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "supplier_orders",
+        "constraint_name": "supplier_orders_check1",
+        "type": "c",
+        "columns": [
+          "status",
+          "received",
+          "quantity"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK ((status::text = 'RECEIVED'::text) = (received = quantity))"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "supplier_orders",
+        "constraint_name": "supplier_orders_check2",
+        "type": "c",
+        "columns": [
+          "status",
+          "received"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK ((status::text <> ALL (ARRAY['PLANNED'::character varying, 'ORDERED'::character varying, 'CANCELLED'::character varying]::text[])) OR received = 0)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "supplier_orders",
+        "constraint_name": "supplier_orders_pkey",
+        "type": "p",
+        "columns": [
+          "id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "supplier_orders",
+        "constraint_name": "supplier_orders_quantity_check",
+        "type": "c",
+        "columns": [
+          "quantity"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (quantity >= 1 AND quantity <= 100000)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "supplier_orders",
+        "constraint_name": "supplier_orders_sku_id_fkey",
+        "type": "f",
+        "columns": [
+          "sku_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "warehouse_skus",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "r",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (sku_id) REFERENCES warehouse_skus(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "supplier_orders",
+        "constraint_name": "supplier_orders_status_check",
+        "type": "c",
+        "columns": [
+          "status"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (status::text = ANY (ARRAY['PLANNED'::character varying, 'ORDERED'::character varying, 'PARTIAL'::character varying, 'RECEIVED'::character varying, 'CANCELLED'::character varying]::text[]))"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "supplier_orders",
+        "constraint_name": "supplier_orders_unit_cost_krw_check",
+        "type": "c",
+        "columns": [
+          "unit_cost_krw"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (unit_cost_krw >= 0 AND unit_cost_krw <= 100000000)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "supplier_orders",
+        "constraint_name": "supplier_orders_version_check",
+        "type": "c",
+        "columns": [
+          "version"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (version > 0)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "support_events",
+        "constraint_name": "support_events_actor_id_fkey",
+        "type": "f",
+        "columns": [
+          "actor_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "users",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "r",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (actor_id) REFERENCES users(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "support_events",
+        "constraint_name": "support_events_pkey",
+        "type": "p",
+        "columns": [
+          "id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "support_events",
+        "constraint_name": "support_events_ticket_id_fkey",
+        "type": "f",
+        "columns": [
+          "ticket_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "support_tickets",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "r",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (ticket_id) REFERENCES support_tickets(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "support_messages",
+        "constraint_name": "support_messages_actor_id_fkey",
+        "type": "f",
+        "columns": [
+          "actor_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "users",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "r",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (actor_id) REFERENCES users(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "support_messages",
+        "constraint_name": "support_messages_actor_id_idempotency_key_key",
+        "type": "u",
+        "columns": [
+          "actor_id",
+          "idempotency_key"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "UNIQUE (actor_id, idempotency_key)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "support_messages",
+        "constraint_name": "support_messages_actor_role_check",
+        "type": "c",
+        "columns": [
+          "actor_role"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (actor_role::text = ANY (ARRAY['CUSTOMER'::character varying, 'SUPPORT'::character varying]::text[]))"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "support_messages",
+        "constraint_name": "support_messages_body_check",
+        "type": "c",
+        "columns": [
+          "body"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (length(body::text) >= 1)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "support_messages",
+        "constraint_name": "support_messages_pkey",
+        "type": "p",
+        "columns": [
+          "id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "support_messages",
+        "constraint_name": "support_messages_sequence_check",
+        "type": "c",
+        "columns": [
+          "sequence"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (sequence >= 1)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "support_messages",
+        "constraint_name": "support_messages_ticket_id_fkey",
+        "type": "f",
+        "columns": [
+          "ticket_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "support_tickets",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "r",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (ticket_id) REFERENCES support_tickets(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "support_messages",
+        "constraint_name": "support_messages_ticket_id_sequence_key",
+        "type": "u",
+        "columns": [
+          "ticket_id",
+          "sequence"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "UNIQUE (ticket_id, sequence)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "support_staff",
+        "constraint_name": "support_staff_pkey",
+        "type": "p",
+        "columns": [
+          "user_id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "PRIMARY KEY (user_id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "support_staff",
+        "constraint_name": "support_staff_user_id_fkey",
+        "type": "f",
+        "columns": [
+          "user_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "users",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "r",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "support_tickets",
+        "constraint_name": "support_tickets_category_check",
+        "type": "c",
+        "columns": [
+          "category"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (category::text = ANY (ARRAY['PAYMENT'::character varying, 'REFUND'::character varying, 'SHIPPING'::character varying, 'ACCOUNT'::character varying, 'OTHER'::character varying]::text[]))"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "support_tickets",
+        "constraint_name": "support_tickets_check",
+        "type": "c",
+        "columns": [
+          "customer_read_sequence",
+          "last_sequence"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (customer_read_sequence <= last_sequence AND customer_read_sequence >= 0)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "support_tickets",
+        "constraint_name": "support_tickets_check1",
+        "type": "c",
+        "columns": [
+          "last_staff_sequence",
+          "last_sequence"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (last_staff_sequence <= last_sequence AND last_staff_sequence >= 0)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "support_tickets",
+        "constraint_name": "support_tickets_order_id_fkey",
+        "type": "f",
+        "columns": [
+          "order_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "capsule_orders",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "r",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (order_id) REFERENCES capsule_orders(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "support_tickets",
+        "constraint_name": "support_tickets_pkey",
+        "type": "p",
+        "columns": [
+          "id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "support_tickets",
+        "constraint_name": "support_tickets_status_check",
+        "type": "c",
+        "columns": [
+          "status"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (status::text = ANY (ARRAY['OPEN'::character varying, 'ANSWERED'::character varying, 'CLOSED'::character varying]::text[]))"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "support_tickets",
+        "constraint_name": "support_tickets_user_id_fkey",
+        "type": "f",
+        "columns": [
+          "user_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "users",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "r",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "support_tickets",
+        "constraint_name": "support_tickets_user_id_idempotency_key_key",
+        "type": "u",
+        "columns": [
+          "user_id",
+          "idempotency_key"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "UNIQUE (user_id, idempotency_key)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "users",
+        "constraint_name": "PK_a3ffb1c0c8416b9fc6f907b7433",
+        "type": "p",
+        "columns": [
+          "id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "users",
+        "constraint_name": "UQ_97672ac88f789774dd47f7c8be3",
+        "type": "u",
+        "columns": [
+          "email"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "UNIQUE (email)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "users",
+        "constraint_name": "users_auth_version_check",
+        "type": "c",
+        "columns": [
+          "auth_version"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (auth_version >= 0)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "users",
+        "constraint_name": "users_gp_spend_version_check",
+        "type": "c",
+        "columns": [
+          "gp_spend_version"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (gp_spend_version >= 0)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "wallet_transactions",
+        "constraint_name": "FK_4796762c619893704abbc3dce65",
+        "type": "f",
+        "columns": [
+          "user_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "users",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "c",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "wallet_transactions",
+        "constraint_name": "PK_5120f131bde2cda940ec1a621db",
+        "type": "p",
+        "columns": [
+          "id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "warehouse_allocations",
+        "constraint_name": "warehouse_allocations_fulfillment_id_fkey",
+        "type": "f",
+        "columns": [
+          "fulfillment_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "fulfillment_orders",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "r",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (fulfillment_id) REFERENCES fulfillment_orders(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "warehouse_allocations",
+        "constraint_name": "warehouse_allocations_pkey",
+        "type": "p",
+        "columns": [
+          "fulfillment_id",
+          "sku_id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "PRIMARY KEY (fulfillment_id, sku_id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "warehouse_allocations",
+        "constraint_name": "warehouse_allocations_quantity_check",
+        "type": "c",
+        "columns": [
+          "quantity"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (quantity >= 1 AND quantity <= 100)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "warehouse_allocations",
+        "constraint_name": "warehouse_allocations_sku_id_fkey",
+        "type": "f",
+        "columns": [
+          "sku_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "warehouse_skus",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "r",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (sku_id) REFERENCES warehouse_skus(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "warehouse_allocations",
+        "constraint_name": "warehouse_allocations_state_check",
+        "type": "c",
+        "columns": [
+          "state"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (state::text = ANY (ARRAY['RESERVED'::character varying, 'RELEASED'::character varying, 'CONSUMED'::character varying]::text[]))"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "warehouse_movements",
+        "constraint_name": "warehouse_movements_actor_id_fkey",
+        "type": "f",
+        "columns": [
+          "actor_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "users",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "r",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (actor_id) REFERENCES users(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "warehouse_movements",
+        "constraint_name": "warehouse_movements_check",
+        "type": "c",
+        "columns": [
+          "on_hand_after",
+          "reserved_after"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (on_hand_after >= 0 AND reserved_after >= 0 AND reserved_after <= on_hand_after)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "warehouse_movements",
+        "constraint_name": "warehouse_movements_kind_check",
+        "type": "c",
+        "columns": [
+          "kind"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (kind::text = ANY (ARRAY['RECEIVE'::character varying, 'ADJUST'::character varying, 'RESERVE'::character varying, 'RELEASE'::character varying, 'DISPATCH'::character varying]::text[]))"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "warehouse_movements",
+        "constraint_name": "warehouse_movements_pkey",
+        "type": "p",
+        "columns": [
+          "id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "warehouse_movements",
+        "constraint_name": "warehouse_movements_sku_id_fkey",
+        "type": "f",
+        "columns": [
+          "sku_id"
+        ],
+        "ref_schema": "public",
+        "ref_table": "warehouse_skus",
+        "ref_columns": [
+          "id"
+        ],
+        "update_action": "a",
+        "delete_action": "r",
+        "match_type": "s",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "FOREIGN KEY (sku_id) REFERENCES warehouse_skus(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "warehouse_movements",
+        "constraint_name": "warehouse_movements_sku_id_source_key_key",
+        "type": "u",
+        "columns": [
+          "sku_id",
+          "source_key"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "UNIQUE (sku_id, source_key)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "warehouse_skus",
+        "constraint_name": "warehouse_skus_check",
+        "type": "c",
+        "columns": [
+          "reserved",
+          "on_hand"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (reserved >= 0 AND reserved <= on_hand)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "warehouse_skus",
+        "constraint_name": "warehouse_skus_code_key",
+        "type": "u",
+        "columns": [
+          "code"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "UNIQUE (code)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "warehouse_skus",
+        "constraint_name": "warehouse_skus_on_hand_check",
+        "type": "c",
+        "columns": [
+          "on_hand"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (on_hand >= 0 AND on_hand <= 10000000)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "warehouse_skus",
+        "constraint_name": "warehouse_skus_pkey",
+        "type": "p",
+        "columns": [
+          "id"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "warehouse_skus",
+        "constraint_name": "warehouse_skus_reorder_point_check",
+        "type": "c",
+        "columns": [
+          "reorder_point"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (reorder_point >= 0 AND reorder_point <= 10000000)"
+      },
+      {
+        "schema_name": "public",
+        "table_name": "warehouse_skus",
+        "constraint_name": "warehouse_skus_version_check",
+        "type": "c",
+        "columns": [
+          "version"
+        ],
+        "ref_schema": null,
+        "ref_table": null,
+        "ref_columns": [],
+        "update_action": " ",
+        "delete_action": " ",
+        "match_type": " ",
+        "deferrable": false,
+        "deferred": false,
+        "validated": true,
+        "definition": "CHECK (version > 0)"
+      }
+    ],
+    "triggers": [
+      {
+        "schema_name": "public",
+        "table_name": "capsule_openings",
+        "name": "immutable_capsule_opening",
+        "type": 19,
+        "function_name": "immutable_capsule_opening",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER immutable_capsule_opening BEFORE UPDATE ON capsule_openings FOR EACH ROW EXECUTE FUNCTION immutable_capsule_opening()",
+        "function_body": " BEGIN RAISE EXCEPTION 'Capsule opening is immutable'; END "
+      },
+      {
+        "schema_name": "public",
+        "table_name": "capsule_orders",
+        "name": "immutable_order_probability",
+        "type": 19,
+        "function_name": "immutable_order_probability",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER immutable_order_probability BEFORE UPDATE ON capsule_orders FOR EACH ROW EXECUTE FUNCTION immutable_order_probability()",
+        "function_body": " BEGIN IF NEW.probability_snapshot IS DISTINCT FROM OLD.probability_snapshot OR NEW.probability_version IS DISTINCT FROM OLD.probability_version THEN RAISE EXCEPTION 'Order probability is immutable'; END IF; RETURN NEW; END "
+      },
+      {
+        "schema_name": "public",
+        "table_name": "wallet_transactions",
+        "name": "track_gp_spend",
+        "type": 5,
+        "function_name": "track_gp_spend",
+        "enabled": "O",
+        "definition": "CREATE TRIGGER track_gp_spend AFTER INSERT ON wallet_transactions FOR EACH ROW EXECUTE FUNCTION track_gp_spend()",
+        "function_body": " BEGIN\n      IF NEW.amount < 0 AND NEW.origin <> 'INVENTORY_RESTORE' THEN\n        UPDATE users SET gp_spend_version = gp_spend_version + 1 WHERE id = NEW.user_id;\n      END IF; RETURN NEW; END "
+      }
+    ],
+    "uniqueIndexes": [
+      {
+        "table_name": "account_closure_requests",
+        "name": "one_active_closure",
+        "definition": "CREATE UNIQUE INDEX one_active_closure ON public.account_closure_requests USING btree (user_id) WHERE ((status)::text = 'REQUESTED'::text)"
+      },
+      {
+        "table_name": "fulfillment_order_items",
+        "name": "fulfillment_active_inventory",
+        "definition": "CREATE UNIQUE INDEX fulfillment_active_inventory ON public.fulfillment_order_items USING btree (inventory_item_id) WHERE active"
+      },
+      {
+        "table_name": "order_refunds",
+        "name": "order_refund_inflight",
+        "definition": "CREATE UNIQUE INDEX order_refund_inflight ON public.order_refunds USING btree (order_id) WHERE ((status)::text <> 'SUCCEEDED'::text)"
+      }
+    ],
+    "tables": [
+      {
+        "schema_name": "public",
+        "name": "account_closure_requests"
+      },
+      {
+        "schema_name": "public",
+        "name": "account_security_events"
+      },
+      {
+        "schema_name": "public",
+        "name": "announcement_reads"
+      },
+      {
+        "schema_name": "public",
+        "name": "announcements"
+      },
+      {
+        "schema_name": "public",
+        "name": "app_notifications"
+      },
+      {
+        "schema_name": "public",
+        "name": "auth_challenges"
+      },
+      {
+        "schema_name": "public",
+        "name": "auth_mail_jobs"
+      },
+      {
+        "schema_name": "public",
+        "name": "auth_recovery_limits"
+      },
+      {
+        "schema_name": "public",
+        "name": "capsule_openings"
+      },
+      {
+        "schema_name": "public",
+        "name": "capsule_orders"
+      },
+      {
+        "schema_name": "public",
+        "name": "catalog_drafts"
+      },
+      {
+        "schema_name": "public",
+        "name": "draws"
+      },
+      {
+        "schema_name": "public",
+        "name": "fulfillment_order_items"
+      },
+      {
+        "schema_name": "public",
+        "name": "fulfillment_orders"
+      },
+      {
+        "schema_name": "public",
+        "name": "fulfillment_quotes"
+      },
+      {
+        "schema_name": "public",
+        "name": "gacha_items"
+      },
+      {
+        "schema_name": "public",
+        "name": "gachas"
+      },
+      {
+        "schema_name": "public",
+        "name": "inventory_conversion_items"
+      },
+      {
+        "schema_name": "public",
+        "name": "inventory_conversions"
+      },
+      {
+        "schema_name": "public",
+        "name": "inventory_items"
+      },
+      {
+        "schema_name": "public",
+        "name": "items"
+      },
+      {
+        "schema_name": "public",
+        "name": "operations_events"
+      },
+      {
+        "schema_name": "public",
+        "name": "operations_permissions"
+      },
+      {
+        "schema_name": "public",
+        "name": "operations_requests"
+      },
+      {
+        "schema_name": "public",
+        "name": "order_prize_refs"
+      },
+      {
+        "schema_name": "public",
+        "name": "order_refunds"
+      },
+      {
+        "schema_name": "public",
+        "name": "owned_capsules"
+      },
+      {
+        "schema_name": "public",
+        "name": "owner_campaigns"
+      },
+      {
+        "schema_name": "public",
+        "name": "owner_cases"
+      },
+      {
+        "schema_name": "public",
+        "name": "payment_intents"
+      },
+      {
+        "schema_name": "public",
+        "name": "payment_prize_refs"
+      },
+      {
+        "schema_name": "public",
+        "name": "shipping_request_items"
+      },
+      {
+        "schema_name": "public",
+        "name": "shipping_requests"
+      },
+      {
+        "schema_name": "public",
+        "name": "supplier_orders"
+      },
+      {
+        "schema_name": "public",
+        "name": "support_events"
+      },
+      {
+        "schema_name": "public",
+        "name": "support_messages"
+      },
+      {
+        "schema_name": "public",
+        "name": "support_staff"
+      },
+      {
+        "schema_name": "public",
+        "name": "support_tickets"
+      },
+      {
+        "schema_name": "public",
+        "name": "users"
+      },
+      {
+        "schema_name": "public",
+        "name": "wallet_transactions"
+      },
+      {
+        "schema_name": "public",
+        "name": "warehouse_allocations"
+      },
+      {
+        "schema_name": "public",
+        "name": "warehouse_movements"
+      },
+      {
+        "schema_name": "public",
+        "name": "warehouse_skus"
+      }
+    ]
+  },
+  "sourceCommit": "d9035e0396f07d47185a3aa257cad82444ded079",
+  "migrationSourceHashes": {
+    "1787225680361-InitSchema.ts": "e3f9b4b41c644d0d4f18edbe778b0a4db4a2e69ce991d2483899a5d4e2fd6edb",
+    "1787230896838-AddSocialLoginToUsers.ts": "c75806c4e55d163e7b497374f76f4ce943f96da502a09546c437d090136e5707",
+    "1787233884024-AddImageAndStockToGachas.ts": "a2cd5940ec81b7bfe9c37eda39f94a0b718965c950dd76a479dcaa8a490c91dc",
+    "1787240000000-ChangeImageUrlToText.ts": "8333179804f19d9f152468a498383c7d4d16f3eaca7c806cef3a081129a9f8f5",
+    "1789390000000-AddCapsuleOrders.ts": "41517b732fe6d121a8ee177ef1515e747fd4474afb4c9e24c16d831d8cb42572",
+    "1789391000000-AddCapsuleOpening.ts": "8dce5c7b1a82a108ca206cccee2e810f9bdc3af31c9307882e9905629ed18b5d",
+    "1789480000000-AddInventoryConversions.ts": "c7edb336acb8a343aedae0399e289113c6988ae33ea9e00c029636a73547fd38",
+    "1789481000000-AddFulfillmentOrders.ts": "20e5e2e12d2bb951e6c6cdbcff12ea7d9e71c57aa1c71438d58a333560e985f6",
+    "1789482000000-AddPaymentsAndRefunds.ts": "2ca143c486b5241a7fd73458f8719dfb86a2ba894ff91c25b35d302994efa045",
+    "1789483000000-AddAccountSupport.ts": "ff05b65d5e6455aef40343faf134d583fea481f3acb9c363b748dbc471a096fb",
+    "1789484000000-AddOperations.ts": "cad19b7312f276d77d75d861a75e50a72565a50b65ac894b0c987e3ee3e9558f",
+    "1789485000000-AddWarehouseNotifications.ts": "ab8fd11f6de6eaf29e542911d7a86968203786a40975ba6fff4032289a14684c",
+    "1789486000000-AddAccountRecovery.ts": "6885637ed1574374599ef0be6c10f7dfc4bf5d7fe2a6f6c3275f8050018db167",
+    "1789487000000-AddOwnerConsole.ts": "e2f15d014bdee07007bcd1a43181cc7e2ec30f07c57fbbeecaab151fe142306a",
+    "1789488000000-AddOwnerTraceAndPublishing.ts": "9b98892a45f7f484ba81e0698fbf5e90ac1328984e9be91516561742bdeb327b"
+  }
+}

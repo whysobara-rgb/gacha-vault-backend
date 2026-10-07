@@ -1,19 +1,27 @@
 # 가치가차 (Gacha Vault) API
 
-실물 상품(명품 시계·가방, 애플 기기, 가전, 뷰티, 식품, 기프티콘) 랜덤박스 앱 **가치가차**의 백엔드입니다.
+실물 상품(명품 시계·가방, 애플 기기, 가전, 뷰티, 기프티콘) 랜덤박스 앱 **가치가차**의 백엔드입니다.
 NestJS 10 + TypeORM + PostgreSQL. 클라이언트는 Flutter 앱(`whysobara-rgb/-`)입니다.
 
 ## 실행
 
 ```bash
 npm install
-cp .env.example .env          # DB 접속 정보, JWT_SECRET 설정
-npm run migration:run         # 스키마 생성/갱신
-npm run seed                  # 데모 박스 8종 + 데모 계정 (demo@gachivault.com / Password1)
+cp .env.example .env          # DB, JWT_SECRET, (선택) 소셜 로그인·토스페이먼츠 키
+npm run migration:run         # 스키마 생성/갱신 (시드보다 먼저)
+npm run seed                  # 출시 상품 구성·배너 + 개발용 계정
 npm run start:dev             # http://localhost:3000, Swagger: /docs
 ```
 
-테스트: `npm test` (확률·천장·출석·충전 한도 로직 단위 테스트, 실제 뽑기 엔진 시뮬레이션 포함)
+개발용 계정 (시드, 운영 DB에서는 시드를 돌리지 마세요)
+- `demo@gachivault.com` / `Password1`: 테스트 GP 보유
+- `admin@gachivault.com` / `Password1`: 운영자(ADMIN)
+
+테스트: `npm test`
+- 확률·천장·출석·충전 한도 로직
+- 실제 뽑기 엔진 시뮬레이션
+- 소셜 토큰 검증 (로컬 키로 서명한 JWT)
+- 토스 클라이언트
 
 ## 뽑기 규칙
 
@@ -23,45 +31,123 @@ npm run start:dev             # http://localhost:3000, Swagger: /docs
 | 천장 | 박스별 `pityThreshold`회 연속 SSR이 안 나오면 다음 뽑기 SSR 확정. 유저·박스별로 카운트 | `gacha_pity_counters` |
 | 10+1 | 한 번에 10회 결제할 때마다 1회 무료 보너스 뽑기 | `MULTI_DRAW_BONUS` |
 | 포인트 전환 | 보관 중인 아이템을 예상 가치의 80% GP로 전환 (배송 불가 상태가 됨) | `ITEM_EXCHANGE_RATE` |
-| 출석체크 | 7일 주기 100/100/150/150/200/200/500 GP, 하루 빠지면 1일차부터 | `ATTENDANCE_REWARDS` |
-| 월 충전 한도 | 유저가 직접 설정. 낮추면 즉시, 올리거나 해제하면 7일 뒤 적용 | `modules/wallet/topup-limit.ts` |
 | 회차 재고 | 박스별 `totalStock`개만 판매. 실제로 열린 수(`soldCount`, 보너스 포함)가 다 차면 품절 | `gachas.soldCount` |
+| 출석체크 | 7일 주기 100/100/150/150/200/200/500 GP, 하루 빠지면 1일차부터 | `ATTENDANCE_REWARDS` |
+| 가입 축하 | 신규 가입 시 3,000 GP | `WELCOME_GP` |
+| 충전 | 토스페이먼츠, 패키지 5천~30만원 (5만원 이상 대량 보너스), 첫 충전 +20% (최대 10,000 GP) | `TOPUP_PACKAGES`, `FIRST_TOPUP_BONUS` |
+| 월 충전 한도 | 유저가 직접 설정. 낮추면 즉시, 올리거나 해제하면 7일 뒤 적용. 실제 결제액만 집계 | `modules/wallet/topup-limit.ts` |
 
-경제 파라미터는 모두 `src/common/constants/economy.constant.ts`에 있습니다. 확률 공시 API로 그대로 노출되는 값이므로 환경 변수가 아니라 코드로 관리합니다.
+경제 파라미터는 모두 `src/common/constants/economy.constant.ts`에 있습니다. 확률 공시 API로 그대로 노출되는 값이므로 환경 변수가 아니라 코드로 관리합니다. 1 GP = 1원입니다.
 
-### 환급률(기대 가치)과 확률 설계
+### 출시 상품 구성과 확률 설계
 
-박스별 확률은 손으로 정하지 않고 시드에서 **목표 환급률로 역산**합니다(`solveTierWeights`).
-- `TARGET_PAYOUT_RATIO = 0.8`: 천장을 포함해 1회 뽑기 기대 상품가치가 가격의 80%, 10+1은 88%.
-- 천장은 각 박스 SSR의 약 1/3을 책임지도록 설정(안전망 역할, 대부분의 SSR은 자연 당첨).
-- 시드는 `뽑기 → 포인트 전환`의 GP 회수율이 1 이상이면(무한 수익 버그) 실행을 거부합니다.
+상품 구성은 `src/database/seeds/launch-catalog.ts` 한 파일에서 관리합니다.
 
-1 GP = 1원으로 가정합니다(배송비 3,000 GP = 3,000원).
+| 박스 | 가격 | 회차 수량 | 천장 | SSR 기본 확률 | 환급률 (1회 / 10+1) |
+| --- | --- | --- | --- | --- | --- |
+| 그랜드 오픈 기념 박스 | 5,000 | 3,000 | 400 | 0.24% | 90% / 99% |
+| 기프티콘 박스 | 3,000 | 30,000 | 300 | 0.35% | 80% / 88% |
+| 뷰티 박스 | 14,900 | 10,000 | 400 | 0.28% | 80% / 88% |
+| 테크 액세서리 박스 | 14,900 | 10,000 | 500 | 0.22% | 80% / 88% |
+| 가전 박스 | 29,900 | 6,000 | 500 | 0.20% | 80% / 88% |
+| 애플 박스 | 49,000 | 5,000 | 400 | 0.32% | 80% / 88% |
+| 명품 잡화 박스 | 59,000 | 5,000 | 400 | 0.30% | 80% / 88% |
+| 드림 박스 | 99,000 | 2,000 | 1,500 | 0.07% | 80% / 88% |
 
-## 추가된 API
+- 확률은 손으로 정하지 않고 시드가 **목표 환급률로 역산**합니다(`solveTierWeights`). 같은 등급 안의 상품은 같은 확률입니다.
+- 천장은 각 박스 SSR의 약 1/3을 책임지도록 설정했습니다. 대부분은 자연 당첨이고 천장은 안전망입니다.
+- SSR이 가격의 40~60배일 때 SSR 확률이 0.2~0.35%로 나옵니다. 상품을 바꿀 때 이 비율을 참고하세요.
+- 시드는 `뽑기 → 포인트 전환` 회수율이 1 이상인 박스(무한 수익 버그)를 거부합니다.
+- 상품권·기프티콘은 액면가이고, 브랜드 상품 가치는 **추정 정가**입니다. 사용자에게 정가로 노출되니 출시 전 반드시 갱신하세요.
+
+홈 배너는 `GET /banners`로 내려가며 시드에 출시 배너 6종이 있습니다. 운영자는 `/admin/banners`로 예약 노출할 수 있습니다.
+
+## 계정·보안
+
+- **소셜 로그인:** 앱은 제공자 SDK가 발급한 토큰만 보내고, 서버가 제공자에게 직접 검증합니다.
+  - 카카오: 앱 ID 일치 확인
+  - 구글·애플: JWKS 서명·aud·iss·exp 확인
+  - 네이버: 프로필 조회
+  - 이메일로 계정을 자동 연결하지 않습니다. 같은 이메일이 다른 방식으로 가입돼 있으면 `10011`을 반환합니다.
+  - 키가 설정된 제공자만 `GET /auth/providers`에 노출됩니다.
+- **가입:** 필수 동의(이용약관·개인정보·만 14세 이상)가 없으면 `10010`. 선택 마케팅 동의는 `PATCH /users/me`로 변경합니다.
+- **탈퇴:** `DELETE /users/me`
+  - 개인정보를 익명화하고 기존 토큰을 즉시 무효화합니다.
+  - 결제·주문 기록은 법정 보관을 위해 남깁니다.
+  - 배송 진행 중이면 `10013`.
+
+## 결제 (토스페이먼츠)
+
+1. `GET /payments/config`: clientKey, customerKey, 패키지, 첫 충전 보너스 대상 여부
+2. `POST /payments/orders` `{packageId}` → orderId, amount, orderName
+3. 앱이 토스 결제위젯을 띄움
+4. 성공하면 `POST /payments/confirm` `{paymentKey, orderId, amount}` → GP 지급
+
+동작 원칙:
+- 서버는 주문 금액과 월 한도를 다시 확인하고 토스 승인 후에만 GP를 지급합니다. 같은 주문을 다시 승인해도 결과만 돌려줍니다.
+- 토스 응답이 없으면 `10015`가 납니다. 같은 값으로 재호출하거나 토스 웹훅(`POST /payments/webhook`)이 오면 서버가 토스에서 결제를 다시 조회해 완료합니다.
+- 토스가 다른 금액을 승인하는 등 이상 건은 지급하지 않고 운영자 확인 목록에 올립니다.
+- 운영 환경(`NODE_ENV=production`)에서는 데모 충전(`POST /wallet/topup`)이 막힙니다.
+
+## 운영자 API (`/admin`, ADMIN 권한)
 
 | Method | Path | 설명 |
 | --- | --- | --- |
+| GET | `/admin/stats` | 오늘·이번 달·누적 매출, 뽑기 수, 신규 가입, 미사용 GP, 발송 대기·확인 필요 결제 |
+| GET/PATCH | `/admin/shipping-requests` | 배송 큐, REQUESTED → SHIPPING(송장 필수) → DELIVERED |
+| GET/PATCH | `/admin/gachas` | 판매 on/off, 회차 수량, 박스별 환급률 |
+| GET/POST/PATCH | `/admin/banners` | 배너 생성·수정·예약 |
+| GET | `/admin/payments`, `/admin/users` | 결제 내역(실패 사유), 회원 검색 |
+
+## 사용자 API 요약
+
+| Method | Path | 설명 |
+| --- | --- | --- |
+| GET | `/gachas`, `/gachas/:id` | 박스 목록(topPrize, 실제 판매량, soldOut) / 상세 |
 | GET | `/gachas/:id/odds` | 확률 공시: 아이템/등급별 확률, 천장·실질 SSR 확률, 10+1, 전환율, 기대 가치 |
-| GET | `/gachas/:id/pity` | 내 천장 진행도 (`remaining`: SSR 확정까지 남은 횟수) |
-| POST | `/draws` | 응답에 `bonusCount`, `totalResults`, `highestRarity`, `pity`, `stock`, 결과별 `isPity`/`isBonus`/`exchangeValue` 추가 |
+| GET | `/gachas/:id/pity` | 내 천장 진행도 |
+| POST | `/draws` | 뽑기 (`bonusCount`, `highestRarity`, `pity`, `stock`, 결과별 `isPity`/`isBonus`) |
 | POST | `/inventory/exchange` | 보관함 아이템 포인트 전환 |
-| GET/POST | `/rewards/attendance` | 출석체크 현황 / 출석 |
-| GET/PUT | `/wallet/limit` | 월 충전 한도 조회 / 설정 |
+| GET/POST | `/rewards/attendance` | 출석체크 |
+| GET/PUT | `/wallet/limit` | 월 충전 한도 |
+| GET | `/banners` | 홈 배너 |
+| GET/POST | `/auth/providers`, `/auth/social-login` | 소셜 로그인 |
+| GET/PATCH/DELETE | `/users/me` | 프로필·마케팅 동의·탈퇴 |
+| * | `/payments/*` | 충전 |
 
-`GET /gachas`, `GET /gachas/:id`의 `soldStock`은 실제 판매 수이며 `soldOut`이 추가됐습니다.
-`GET /inventory`는 기본적으로 전환(EXCHANGED)된 아이템을 제외합니다(`?status=EXCHANGED`로 조회 가능). 포인트 내역에는 `reason`(TOPUP, DRAW, EXCHANGE, ATTENDANCE, SHIPPING_FEE, SIGNUP_BONUS, ADJUSTMENT)이 추가됐습니다.
+### 응답 코드
 
-신규 응답 코드: `10007` 월 충전 한도 초과, `10008` 오늘 이미 출석함, `10009` 품절/남은 수량 부족(`errors`에 `remaining:N`).
+| 코드 | 의미 |
+| --- | --- |
+| 10006 | 잔액 부족 |
+| 10007 | 월 충전 한도 초과 |
+| 10008 | 오늘 이미 출석함 |
+| 10009 | 품절/남은 수량 부족 (`errors`에 `remaining:N`) |
+| 10010 | 필수 약관 동의 필요 |
+| 10011 | 다른 방식으로 가입된 이메일 |
+| 10012 | 소셜 로그인 사용 불가 |
+| 10013 | 배송 진행 중이라 탈퇴 불가 |
+| 10014 | 결제 실패 |
+| 10015 | 결제 확인 중/결제 미설정 |
 
 ## 출시 전 체크리스트
 
-랜덤박스는 공정거래위원회 제재 이력이 있는 업종이라, 아래 항목은 매출과 직결되는 리스크입니다.
-
-- [x] **가짜 판매량 제거**: 판매 수에 더하던 `soldStockBaseline`을 실제 판매 수(`soldCount`)로 교체하고, `totalStock` 도달 시 실제로 판매를 막습니다.
-- [x] **가짜 랭킹/당첨 피드 제거**: 시드의 합성 계정·뽑기 이력을 없애고, 마이그레이션이 기존 DB에 남은 합성 계정(`*@demo.gachivault.com`, 비밀번호 없음)을 삭제합니다.
-- [ ] **실물 재고 확보**: 회차 `totalStock`과 확률에 맞춰 SSR/SR 실물을 미리 확보해 두세요(당첨됐는데 상품이 없으면 분쟁 1순위). 운영 DB에서는 시드를 돌리지 마세요.
-- [ ] **GP 현금 환급 금지**: GP는 앱 안에서만 사용. 아이템→GP 전환에 더해 GP→현금 출금이 생기면 사행성 문제로 번질 수 있습니다. 포인트 전환 기능 자체도 출시 전 법률 검토를 받으세요.
-- [ ] **상품 정보·확률 고지**: 박스 상세 화면에서 `/gachas/:id/odds` 내용을 노출하고, 상품별 실제 시세에 맞게 `estimatedValue`를 갱신하세요(현재 값은 데모용).
-- [ ] **결제 연동**: `POST /wallet/topup`은 데모용입니다. PG 웹훅으로 교체하고, 미성년자 결제 취소·청약철회 정책을 정하세요.
-- [ ] **상품 이미지 라이선스** 확인.
+- [x] 가짜 판매량·합성 랭킹 데이터 제거, 실제 회차 재고로 품절 처리
+- [x] 소셜 로그인 서버 검증 (계정 탈취 취약점 수정)
+- [ ] **PG 가맹 심사**
+  - 랜덤박스 업종은 PG 심사에서 추가 서류를 요구하거나 거절될 수 있습니다. 토스페이먼츠 심사를 먼저 진행하세요.
+  - 승인 전에는 테스트 키로 개발합니다.
+- [ ] **유상 GP 환불 정책**
+  - 미사용 충전 GP의 청약철회·환불 규정을 약관에 정하고 운영 절차를 마련하세요.
+  - 현재는 토스에서 취소되면 주문을 CANCELED로 표시만 하고 GP 회수는 운영자가 처리합니다.
+- [ ] **상품 가치·이미지**
+  - 브랜드 상품 추정 정가를 실제 정가로 갱신하고, 사용권이 확인된 실물 사진으로 교체하세요.
+  - 당첨 확률 대비 실물 재고(SSR/SR)를 확보하세요.
+- [ ] **GP 현금 환급 금지**
+  - GP는 앱 안에서만 사용합니다. 포인트 전환 기능은 출시 전 법률 검토를 받으세요.
+- [ ] **본인인증**
+  - 다계정으로 가입 축하 GP를 모으는 어뷰징은 본인인증(PASS 등)으로 막을 수 있습니다.
+  - 이메일 가입은 메일 인증이 없어, 남의 이메일을 선점하는 것도 가능합니다.
+- [ ] **네이버 로그인**
+  - 네이버는 토큰의 발급 앱을 확인할 수 없어, 다른 앱에서 받은 토큰을 재사용할 여지가 있습니다.
+  - 서버에서 authorization code를 교환하는 방식으로 바꾸면 막힙니다.

@@ -28,6 +28,7 @@ import {
   Banner,
   CurrencyType,
   ItemRarity,
+  UserRole,
   WalletTransactionReason,
   WalletTransactionType,
 } from '../../entities';
@@ -191,6 +192,20 @@ async function run() {
       }),
     );
     console.log(`👤 Demo balance refilled to ${DEMO_BALANCE}.`);
+  }
+
+  // Operator account for the /admin API (dev only).
+  if (!(await userRepo.exists({ where: { email: 'admin@gachivault.com' } }))) {
+    await userRepo.save(
+      userRepo.create({
+        email: 'admin@gachivault.com',
+        password: await bcrypt.hash('Password1', 10),
+        nickname: '운영자',
+        role: UserRole.ADMIN,
+        termsAgreedAt: new Date(),
+      }),
+    );
+    console.log('🛠️  Created admin user: admin@gachivault.com / Password1');
   }
 
   // Earlier versions of this seed created display-only accounts

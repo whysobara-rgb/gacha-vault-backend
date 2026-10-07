@@ -48,6 +48,19 @@ export class ShippingRequest {
   })
   status: ShippingRequestStatus;
 
+  /** 택배사, set by an operator when the parcel ships. */
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  trackingCompany: string | null;
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  trackingNumber: string | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  shippedAt: Date | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  deliveredAt: Date | null;
+
   @OneToMany(() => ShippingRequestItem, (sri) => sri.shippingRequest)
   items: ShippingRequestItem[];
 

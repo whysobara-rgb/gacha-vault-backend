@@ -166,6 +166,10 @@ export class ShippingService {
       address: row.address,
       notes: row.notes,
       status: row.status,
+      trackingCompany: row.trackingCompany,
+      trackingNumber: row.trackingNumber,
+      shippedAt: row.shippedAt,
+      deliveredAt: row.deliveredAt,
       items: row.items.map((sri) => ({
         inventoryItemId: sri.inventoryItem.id,
         itemId: sri.inventoryItem.item.id,

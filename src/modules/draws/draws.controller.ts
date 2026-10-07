@@ -17,7 +17,8 @@ export class DrawsController {
   @ApiOperation({
     summary: '가차 뽑기',
     description:
-      '지정한 가차(gachaId)에서 1회 뽑기를 수행합니다. 잔액 확인/차감/결과 아이템 지급이 하나의 트랜잭션으로 처리됩니다.',
+      '지정한 가차(gachaId)에서 count회 뽑기를 수행합니다(10회마다 +1 보너스). ' +
+      '천장 도달 시 SSR이 확정되며, 잔액 확인/차감/결과 아이템 지급/천장 갱신이 하나의 트랜잭션으로 처리됩니다.',
   })
   create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateDrawDto) {
     return this.drawsService.createDraw(user.userId, dto);

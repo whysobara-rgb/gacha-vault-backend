@@ -8,13 +8,9 @@ import {
 } from 'typeorm';
 import { GachaItem } from './gacha-item.entity';
 import { InventoryItem } from './inventory-item.entity';
+import { ItemRarity } from './item-rarity.enum';
 
-export enum ItemRarity {
-  N = 'N',
-  R = 'R',
-  SR = 'SR',
-  SSR = 'SSR',
-}
+export { ItemRarity };
 
 @Entity('items')
 export class Item {

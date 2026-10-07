@@ -12,6 +12,10 @@ import { InventoryModule } from './modules/inventory/inventory.module';
 import { ShippingModule } from './modules/shipping/shipping.module';
 import { WalletModule } from './modules/wallet/wallet.module';
 import { RankingsModule } from './modules/rankings/rankings.module';
+import { RewardsModule } from './modules/rewards/rewards.module';
+import { BannersModule } from './modules/banners/banners.module';
+import { PaymentsModule } from './modules/payments/payments.module';
+import { AdminModule } from './modules/admin/admin.module';
 
 @Module({
   imports: [
@@ -28,6 +32,10 @@ import { RankingsModule } from './modules/rankings/rankings.module';
     ShippingModule,
     WalletModule,
     RankingsModule,
+    RewardsModule,
+    BannersModule,
+    PaymentsModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [AppService],

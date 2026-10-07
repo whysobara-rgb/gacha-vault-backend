@@ -16,6 +16,8 @@ export enum InventoryStatus {
   SHIPPING_REQUESTED = 'SHIPPING_REQUESTED',
   SHIPPING = 'SHIPPING',
   DELIVERED = 'DELIVERED',
+  /** Converted to GP via POST /inventory/exchange; no longer shippable. */
+  EXCHANGED = 'EXCHANGED',
 }
 
 @Entity('inventory_items')

@@ -7,6 +7,7 @@ import {
   ShippingRequestItem,
   User,
   WalletTransaction,
+  WalletTransactionReason,
   WalletTransactionType,
 } from '../../entities';
 import { BusinessException } from '../../common/exceptions/business.exception';
@@ -101,6 +102,7 @@ export class ShippingService {
         walletRepo.create({
           userId: user.id,
           type: WalletTransactionType.USE,
+          reason: WalletTransactionReason.SHIPPING_FEE,
           amount: -DELIVERY_FEE,
           description: '배송 신청 배송비',
           balanceAfter: user.coinBalance,
@@ -164,6 +166,10 @@ export class ShippingService {
       address: row.address,
       notes: row.notes,
       status: row.status,
+      trackingCompany: row.trackingCompany,
+      trackingNumber: row.trackingNumber,
+      shippedAt: row.shippedAt,
+      deliveredAt: row.deliveredAt,
       items: row.items.map((sri) => ({
         inventoryItemId: sri.inventoryItem.id,
         itemId: sri.inventoryItem.item.id,

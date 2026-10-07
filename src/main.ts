@@ -51,6 +51,10 @@ async function bootstrap() {
     .addTag('shipping-requests', '배송 신청')
     .addTag('wallet', '지갑(GP)/포인트 내역')
     .addTag('rankings', '랭킹(유저/인기박스/실시간당첨)')
+    .addTag('rewards', '출석체크/리워드')
+    .addTag('banners', '홈 이벤트 배너')
+    .addTag('payments', '토스페이먼츠 GP 충전')
+    .addTag('admin', '운영자 (ADMIN 권한)')
     .build();
   const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('docs', app, swaggerDocument);

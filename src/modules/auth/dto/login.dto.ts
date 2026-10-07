@@ -8,6 +8,8 @@ export class LoginDto {
 
   @ApiProperty({ example: 'Password1' })
   @IsString()
-  @MinLength(8, { message: 'password must be longer than or equal to 8 characters' })
+  @MinLength(8, {
+    message: 'password must be longer than or equal to 8 characters',
+  })
   password: string;
 }

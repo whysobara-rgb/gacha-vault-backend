@@ -40,24 +40,9 @@ export interface CatalogBox {
   items: CatalogItem[];
 }
 
-// Box hero photos carried over from the previous catalog. Item photos are
-// left empty until real, licensed product photos are uploaded.
-const HERO = {
-  watch:
-    'https://sspark.genspark.ai/cfimages?u1=6RuSQ1PGmKymgmJpYjpk0huOgE0HifYnHEdnz3APDvDPPQEXLpytKZY2UppAcf2hGnw9AOigS2%2FSGu%2BzzLjnyf5t%2F77h8GzahnRmn99hMrVWKz%2F7Nne9u7%2FeJORcPVV3BmshggKxmJwgU9%2BzaU77IYsS04vxTiudpSCQWZH3Dy9ksTve3C0jZWqVx3oRhJtbWpvkvPijhOvCqn03nURT&u2=lfYxuXUPZblX6Ymb&width=2560',
-  phone:
-    'https://sspark.genspark.ai/cfimages?u1=33przEvwgv7f8T86wNlIiCwkncjsLu7d3jV1rnHjU8YqIj9Mq%2F5ZRjDqgdyksyQsecrMCVo1QPnzM5YMQD5fBZFhRmbTfZIvzP2vriVvHOUiO%2FVaDVNRvZmRm1xF81Wbc7XgxxFCVDmtRV8Bil5nCMw9kyP9hXsffzO82A3VCWWpUqBe8orJDFCjI8eiaI9Wao8U44vA1sN0pmvRT2X1YasEoeKBReU1hwcvYd7HKlGT%2BPIbfs8RG7yx%2BjVCpCrRGqUh4p6uiOAIpxXx6IHX9zfKBbxTF8nuDzsGO0ubNNx84ot94CHjRT4jL2fnoBXqISdxcegzUQxKICP%2B4363%2FyfWUNFFDhTlu5pUkjgWcDE%3D&u2=%2BNUeCRcnPRFAD7ey&width=2560',
-  bag: 'https://sspark.genspark.ai/cfimages?u1=5abIalUAla9YELlQBnhaHc09OjirX92Jq%2BApL1zcNUCSKEk6kEhq%2BZVuHQppyiwjEqHJ4gu10BG4qI70xH1gkEDasx0HvbJaexfNkPfNoE6zSkZ9Fd08A1QIP2ojBFWZrxnzaQIUJwszcpCH7ayolm1VlPVSmjhKkkWxiU9XCxNc2l%2BikfGqhS86F6BlPrJBNEXDp6eE89C3gNlyqA%3D%3D&u2=43PMQR8wqUA5lsXZ&width=2560',
-  fashion:
-    'https://sspark.genspark.ai/cfimages?u1=SSPGwXzFKTwJH3v7FpHx4eRwhMBHF%2Fsix7cpoRfs24uz0lL1UUzDNtr4gdnQKnD6h%2BJbbU6X6o7n00qzXdnmA6SnkMYCRS0VHeKfhbExcQ%2FLa%2Fjbr2XBWXhJKPVmDrytghWAIMG75fpilYivaFM3Nv75vROPaLgOhQTZsfX%2FICpFLYWml39FimViBkrQc9721pOVD9ohvTpPMGvqNEkA0uF1%2BlY8wNps5hYWQvU%2BWgM%3D&u2=JAUpfpVqxB398BFH&width=2560',
-  beauty:
-    'https://sspark.genspark.ai/cfimages?u1=BiHtzar7kPeytPfreitxHIOJyq4%2BZ46feIH7hJQz296sWFV6XPdItMzgaZIqQtz0Z%2FUIAnX4h2LnVZPuY8BfsS02LPk0mfN%2FpgeDthBJrWuR23qwVbJQvAhdyMFBdAxsaoSSEZAXsgi37PPkY3HNCQs1HLO4mfOl2kuG3hfrAN5HMZkPkTIlXpc%2Fqivh6iYFgdwlq4gI3N4C0gHIWPGwUgZde%2F0e&u2=L%2BydwSaMf7G5daRP&width=2560',
-  devices:
-    'https://sspark.genspark.ai/cfimages?u1=%2BB2R4%2FSPtldF6scqy%2F4OaZqdHtdzvx5Riwmuze0G2JmsEeda82Z5e8p0%2Baxk5Nqe6IdhWfBlaDhCajSZUzcal4AXzoknG%2FOEuaJim0DZXwg209s6ar9HVXdXAqnQJuQNLgq8%2Bt6ucnjRtKY%3D&u2=sM3kBUlaj%2F1buJUo&width=2560',
-  food: 'https://sspark.genspark.ai/cfimages?u1=7X1ZjJOwFRPvg5eM3dJ9GAkaHKrNcobyFuM6l0psaLAKwg0cIcF2hscfUa4a%2FlZ3ITKryUUjcmDwz5i81BD88hYT%2BfAcgVJpIHfvjGh6tZiPqf5c%2FBLTGV3BLOD6ELUBQTvgj823Eguch1g8gbgIhP%2FJIQ%3D%3D&u2=Gt34EI5BIOc1c2w3&width=2560',
-  gifticon:
-    'https://sspark.genspark.ai/cfimages?u1=hGi1pTJGBlNn9Ov1ydiyAt1PehD1iT8NOKhDTzXr91v0EOzWcIjCCga2JgbMPDPgEC6yBZE3bowgDr7MhGduCehajSxUgMqgH%2FJ5TYbsHl7BS3xNag%3D%3D&u2=%2B6P9C6PdF9%2FHaMvT&width=2560',
-} as const;
+// Boxes ship without photos: the app draws each box's package art from its
+// accent color and category. Set imageUrl only to a licensed photo the
+// operator owns; item photos likewise.
 
 const { SSR, SR, R, N } = ItemRarity;
 
@@ -75,7 +60,7 @@ export const LAUNCH_CATALOG: CatalogBox[] = [
     iconName: 'celebration',
     badgeLabel: 'OPEN 기념',
     accentColorHex: '#C9A227',
-    imageUrl: HERO.gifticon,
+    imageUrl: null,
     items: [
       { name: '애플 에어팟 프로', rarity: SSR, value: 369000 },
       { name: '신세계상품권 5만원', rarity: SR, value: 50000 },
@@ -98,7 +83,7 @@ export const LAUNCH_CATALOG: CatalogBox[] = [
     iconName: 'card_giftcard',
     badgeLabel: null,
     accentColorHex: '#3D7BF7',
-    imageUrl: HERO.gifticon,
+    imageUrl: null,
     items: [
       { name: '신세계상품권 10만원', rarity: SSR, value: 100000 },
       { name: '배달의민족 상품권 2만원', rarity: SR, value: 20000 },
@@ -121,7 +106,7 @@ export const LAUNCH_CATALOG: CatalogBox[] = [
     iconName: 'face_retouching_natural',
     badgeLabel: null,
     accentColorHex: '#D6558C',
-    imageUrl: HERO.beauty,
+    imageUrl: null,
     items: [
       { name: '다이슨 에어랩 멀티 스타일러', rarity: SSR, value: 749000 },
       { name: '조말론 런던 코롱 30ml', rarity: SR, value: 117000 },
@@ -144,7 +129,7 @@ export const LAUNCH_CATALOG: CatalogBox[] = [
     iconName: 'headphones',
     badgeLabel: 'NEW',
     accentColorHex: '#2A7DAF',
-    imageUrl: HERO.devices,
+    imageUrl: null,
     items: [
       { name: '애플 에어팟 맥스', rarity: SSR, value: 769000 },
       { name: '애플 에어팟 4', rarity: SR, value: 199000 },
@@ -167,7 +152,7 @@ export const LAUNCH_CATALOG: CatalogBox[] = [
     iconName: 'devices',
     badgeLabel: null,
     accentColorHex: '#4C8C4A',
-    imageUrl: HERO.devices,
+    imageUrl: null,
     items: [
       { name: '다이슨 V15 디텍트 무선청소기', rarity: SSR, value: 1190000 },
       { name: '발뮤다 더 토스터', rarity: SR, value: 399000 },
@@ -190,7 +175,7 @@ export const LAUNCH_CATALOG: CatalogBox[] = [
     iconName: 'phone_iphone',
     badgeLabel: 'HOT',
     accentColorHex: '#3C3C3C',
-    imageUrl: HERO.phone,
+    imageUrl: null,
     items: [
       { name: '애플 아이폰 프로 256GB', rarity: SSR, value: 1700000 },
       { name: '애플 맥북 에어 13', rarity: SSR, value: 1590000 },
@@ -213,7 +198,7 @@ export const LAUNCH_CATALOG: CatalogBox[] = [
     iconName: 'shopping_bag',
     badgeLabel: null,
     accentColorHex: '#8A6D3B',
-    imageUrl: HERO.bag,
+    imageUrl: null,
     items: [
       { name: '프라다 리나일론 숄더백', rarity: SSR, value: 2500000 },
       { name: '구찌 GG 마몬트 미니 숄더백', rarity: SSR, value: 2400000 },
@@ -241,7 +226,7 @@ export const LAUNCH_CATALOG: CatalogBox[] = [
     iconName: 'diamond',
     badgeLabel: 'DREAM',
     accentColorHex: '#B8862B',
-    imageUrl: HERO.watch,
+    imageUrl: null,
     items: [
       { name: '롤렉스 서브마리너 데이트', rarity: SSR, value: 16000000 },
       { name: '샤넬 클래식 플랩백 미디엄', rarity: SSR, value: 16000000 },

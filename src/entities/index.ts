@@ -9,3 +9,4 @@ export * from './shipping-request-item.entity';
 export * from './wallet-transaction.entity';
 export * from './gacha-pity-counter.entity';
 export * from './attendance-checkin.entity';
+export * from './banner.entity';

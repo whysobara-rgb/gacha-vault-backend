@@ -52,6 +52,7 @@ async function bootstrap() {
     .addTag('wallet', '지갑(GP)/포인트 내역')
     .addTag('rankings', '랭킹(유저/인기박스/실시간당첨)')
     .addTag('rewards', '출석체크/리워드')
+    .addTag('banners', '홈 이벤트 배너')
     .build();
   const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('docs', app, swaggerDocument);

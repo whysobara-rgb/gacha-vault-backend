@@ -1,6 +1,6 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Gacha, GachaItem, GachaPityCounter } from '../../entities';
 import { ListGachasQueryDto } from './dto/list-gachas.query.dto';
 import { BusinessException } from '../../common/exceptions/business.exception';
@@ -54,6 +54,7 @@ export class GachaService {
       skip: (page - 1) * limit,
       take: limit,
     });
+    const topPrizes = await this.topPrizesFor(items.map((gacha) => gacha.id));
 
     return {
       items: items.map((gacha) => ({
@@ -70,6 +71,7 @@ export class GachaService {
         imageUrl: gacha.imageUrl,
         pityThreshold: gacha.pityThreshold,
         ...stockOf(gacha),
+        topPrize: topPrizes.get(gacha.id) ?? null,
       })),
       page,
       limit,
@@ -228,6 +230,42 @@ export class GachaService {
         RARITY_RANK[a.item.rarity] - RARITY_RANK[b.item.rarity] ||
         b.weight - a.weight,
     );
+  }
+
+  /** Each box's headline prize: rarest tier first, then most valuable. */
+  private async topPrizesFor(gachaIds: number[]) {
+    const prizes = new Map<
+      number,
+      {
+        itemId: number;
+        name: string;
+        rarity: string;
+        estimatedValue: number;
+        imageUrl: string | null;
+      }
+    >();
+    if (gachaIds.length === 0) return prizes;
+
+    const pool = await this.gachaItemRepository.find({
+      where: { gachaId: In(gachaIds) },
+      relations: ['item'],
+    });
+    pool.sort(
+      (a, b) =>
+        RARITY_RANK[a.item.rarity] - RARITY_RANK[b.item.rarity] ||
+        b.item.estimatedValue - a.item.estimatedValue,
+    );
+    for (const entry of pool) {
+      if (prizes.has(entry.gachaId)) continue;
+      prizes.set(entry.gachaId, {
+        itemId: entry.item.id,
+        name: entry.item.name,
+        rarity: entry.item.rarity,
+        estimatedValue: entry.item.estimatedValue,
+        imageUrl: entry.item.imageUrl,
+      });
+    }
+    return prizes;
   }
 
   private economyEntry(entry: GachaItem) {

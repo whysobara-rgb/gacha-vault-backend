@@ -76,6 +76,13 @@ export class Gacha {
   @Column({ type: 'int', default: 0 })
   soldStockBaseline: number;
 
+  /**
+   * 천장: the Nth consecutive draw without an SSR is guaranteed to be SSR.
+   * Null disables pity for this box. Disclosed via GET /gachas/:id/odds.
+   */
+  @Column({ type: 'int', nullable: true })
+  pityThreshold: number | null;
+
   @OneToMany(() => GachaItem, (gachaItem) => gachaItem.gacha)
   gachaItems: GachaItem[];
 

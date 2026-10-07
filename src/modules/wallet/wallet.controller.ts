@@ -1,8 +1,19 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Put,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { WalletService } from './wallet.service';
 import { ListPointHistoryQueryDto } from './dto/list-point-history.query.dto';
 import { TopupDto } from './dto/topup.dto';
+import { UpdateTopupLimitDto } from './dto/update-topup-limit.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 
@@ -41,5 +52,28 @@ export class WalletController {
   })
   topup(@CurrentUser() user: AuthenticatedUser, @Body() dto: TopupDto) {
     return this.walletService.topup(user.userId, dto);
+  }
+
+  @Get('limit')
+  @ApiOperation({
+    summary: '월 충전 한도 조회',
+    description:
+      '내가 설정한 월 충전 한도, 이번 달(KST) 충전액/잔여 한도, 대기 중인 한도 변경을 반환합니다.',
+  })
+  getTopupLimit(@CurrentUser() user: AuthenticatedUser) {
+    return this.walletService.getTopupLimit(user.userId);
+  }
+
+  @Put('limit')
+  @ApiOperation({
+    summary: '월 충전 한도 설정',
+    description:
+      '한도를 낮추면 즉시 적용되고, 높이거나 해제(null)하면 7일 뒤에 적용됩니다.',
+  })
+  updateTopupLimit(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: UpdateTopupLimitDto,
+  ) {
+    return this.walletService.updateTopupLimit(user.userId, dto);
   }
 }

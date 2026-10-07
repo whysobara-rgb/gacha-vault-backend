@@ -1,99 +1,64 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# 가치가차 (Gacha Vault) API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+실물 상품(명품 시계·가방, 애플 기기, 가전, 뷰티, 식품, 기프티콘) 랜덤박스 앱 **가치가차**의 백엔드입니다.
+NestJS 10 + TypeORM + PostgreSQL. 클라이언트는 Flutter 앱(`whysobara-rgb/-`)입니다.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
-
-## Description
-
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
-
-## Project setup
+## 실행
 
 ```bash
-$ npm install
+npm install
+cp .env.example .env          # DB 접속 정보, JWT_SECRET 설정
+npm run migration:run         # 스키마 생성/갱신
+npm run seed                  # 데모 박스 8종 + 데모 계정 (demo@gachivault.com / Password1)
+npm run start:dev             # http://localhost:3000, Swagger: /docs
 ```
 
-## Compile and run the project
+테스트: `npm test` (확률·천장·출석·충전 한도 로직 단위 테스트, 실제 뽑기 엔진 시뮬레이션 포함)
 
-```bash
-# development
-$ npm run start
+## 뽑기 규칙
 
-# watch mode
-$ npm run start:dev
+| 규칙 | 내용 | 위치 |
+| --- | --- | --- |
+| 난수 | `crypto.randomInt` 기반 가중치 추첨 (정수 가중치, 오차 없음) | `modules/draws/draw-engine.ts` |
+| 천장 | 박스별 `pityThreshold`회 연속 SSR이 안 나오면 다음 뽑기 SSR 확정. 유저·박스별로 카운트 | `gacha_pity_counters` |
+| 10+1 | 한 번에 10회 결제할 때마다 1회 무료 보너스 뽑기 | `MULTI_DRAW_BONUS` |
+| 포인트 전환 | 보관 중인 아이템을 예상 가치의 80% GP로 전환 (배송 불가 상태가 됨) | `ITEM_EXCHANGE_RATE` |
+| 출석체크 | 7일 주기 100/100/150/150/200/200/500 GP, 하루 빠지면 1일차부터 | `ATTENDANCE_REWARDS` |
+| 월 충전 한도 | 유저가 직접 설정. 낮추면 즉시, 올리거나 해제하면 7일 뒤 적용 | `modules/wallet/topup-limit.ts` |
 
-# production mode
-$ npm run start:prod
-```
+경제 파라미터는 모두 `src/common/constants/economy.constant.ts`에 있습니다. 확률 공시 API로 그대로 노출되는 값이므로 환경 변수가 아니라 코드로 관리합니다.
 
-## Run tests
+### 환급률(기대 가치)과 확률 설계
 
-```bash
-# unit tests
-$ npm run test
+박스별 확률은 손으로 정하지 않고 시드에서 **목표 환급률로 역산**합니다(`solveTierWeights`).
+- `TARGET_PAYOUT_RATIO = 0.8`: 천장을 포함해 1회 뽑기 기대 상품가치가 가격의 80%, 10+1은 88%.
+- 천장은 각 박스 SSR의 약 1/3을 책임지도록 설정(안전망 역할, 대부분의 SSR은 자연 당첨).
+- 시드는 `뽑기 → 포인트 전환`의 GP 회수율이 1 이상이면(무한 수익 버그) 실행을 거부합니다.
 
-# e2e tests
-$ npm run test:e2e
+1 GP = 1원으로 가정합니다(배송비 3,000 GP = 3,000원).
 
-# test coverage
-$ npm run test:cov
-```
+## 추가된 API
 
-## Deployment
+| Method | Path | 설명 |
+| --- | --- | --- |
+| GET | `/gachas/:id/odds` | 확률 공시: 아이템/등급별 확률, 천장·실질 SSR 확률, 10+1, 전환율, 기대 가치 |
+| GET | `/gachas/:id/pity` | 내 천장 진행도 (`remaining`: SSR 확정까지 남은 횟수) |
+| POST | `/draws` | 응답에 `bonusCount`, `totalResults`, `highestRarity`, `pity`, 결과별 `isPity`/`isBonus`/`exchangeValue` 추가 |
+| POST | `/inventory/exchange` | 보관함 아이템 포인트 전환 |
+| GET/POST | `/rewards/attendance` | 출석체크 현황 / 출석 |
+| GET/PUT | `/wallet/limit` | 월 충전 한도 조회 / 설정 |
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+`GET /inventory`는 기본적으로 전환(EXCHANGED)된 아이템을 제외합니다(`?status=EXCHANGED`로 조회 가능). 포인트 내역에는 `reason`(TOPUP, DRAW, EXCHANGE, ATTENDANCE, SHIPPING_FEE, SIGNUP_BONUS, ADJUSTMENT)이 추가됐습니다.
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+신규 응답 코드: `10007` 월 충전 한도 초과, `10008` 오늘 이미 출석함.
 
-```bash
-$ npm install -g mau
-$ mau deploy
-```
+## 출시 전 체크리스트
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+랜덤박스는 공정거래위원회 제재 이력이 있는 업종이라, 아래 항목은 매출과 직결되는 리스크입니다.
 
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+- [ ] **가짜 판매량 제거**: `gachas.soldStockBaseline`은 실제로 팔리지 않은 수량을 판매된 것처럼 더해 "OOO/전체"를 표시합니다. `totalStock`도 판매를 실제로 막지 않습니다. 실제 재고 기반으로 바꾸거나 표시를 내려야 합니다.
+- [ ] **가짜 랭킹/당첨 피드 제거**: 시드가 만드는 8개 데모 계정과 합성 뽑기 이력이 `/rankings/*`(실시간 당첨 포함)에 노출됩니다. 운영 DB에서는 시드를 돌리지 마세요.
+- [ ] **GP 현금 환급 금지**: GP는 앱 안에서만 사용. 아이템→GP 전환에 더해 GP→현금 출금이 생기면 사행성 문제로 번질 수 있습니다. 포인트 전환 기능 자체도 출시 전 법률 검토를 받으세요.
+- [ ] **상품 정보·확률 고지**: 박스 상세 화면에서 `/gachas/:id/odds` 내용을 노출하고, 상품별 실제 시세에 맞게 `estimatedValue`를 갱신하세요(현재 값은 데모용).
+- [ ] **결제 연동**: `POST /wallet/topup`은 데모용입니다. PG 웹훅으로 교체하고, 미성년자 결제 취소·청약철회 정책을 정하세요.
+- [ ] **상품 이미지 라이선스** 확인.

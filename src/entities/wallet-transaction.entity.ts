@@ -14,6 +14,17 @@ export enum WalletTransactionType {
   EXPIRE = 'EXPIRE',
 }
 
+/** Why the balance changed. Monthly top-up limits sum only TOPUP rows. */
+export enum WalletTransactionReason {
+  TOPUP = 'TOPUP',
+  SIGNUP_BONUS = 'SIGNUP_BONUS',
+  ATTENDANCE = 'ATTENDANCE',
+  EXCHANGE = 'EXCHANGE',
+  DRAW = 'DRAW',
+  SHIPPING_FEE = 'SHIPPING_FEE',
+  ADJUSTMENT = 'ADJUSTMENT',
+}
+
 /**
  * Ledger entry for every balance change (GP/coin) a user experiences:
  * signup bonus, demo top-up (EARN), gacha draw (USE), future expiry (EXPIRE).
@@ -33,6 +44,9 @@ export class WalletTransaction {
 
   @Column({ type: 'enum', enum: WalletTransactionType })
   type: WalletTransactionType;
+
+  @Column({ type: 'enum', enum: WalletTransactionReason, nullable: true })
+  reason: WalletTransactionReason | null;
 
   /** Signed amount: positive for EARN, negative for USE/EXPIRE. */
   @Column({ type: 'int' })

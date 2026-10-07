@@ -1,8 +1,10 @@
 import { ConfigService } from '@nestjs/config';
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import {
+  AttendanceCheckin,
   Gacha,
   GachaItem,
+  GachaPityCounter,
   InventoryItem,
   Item,
   User,
@@ -22,6 +24,8 @@ const entities = [
   ShippingRequest,
   ShippingRequestItem,
   WalletTransaction,
+  GachaPityCounter,
+  AttendanceCheckin,
 ];
 
 export const buildTypeOrmConfig = (

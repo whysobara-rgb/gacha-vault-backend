@@ -48,6 +48,21 @@ export class User {
   @Column({ type: 'varchar', length: 255, nullable: true })
   providerId: string | null;
 
+  /** Self-set cap on GP top-ups per KST calendar month. Null = no cap. */
+  @Column({ type: 'int', nullable: true })
+  monthlyTopupLimit: number | null;
+
+  /**
+   * A requested raise/removal of monthlyTopupLimit, applied once
+   * pendingTopupLimitEffectiveAt passes. A pending change exists iff
+   * pendingTopupLimitEffectiveAt is set (a null limit then means "remove").
+   */
+  @Column({ type: 'int', nullable: true })
+  pendingMonthlyTopupLimit: number | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  pendingTopupLimitEffectiveAt: Date | null;
+
   @OneToMany(() => Draw, (draw) => draw.user)
   draws: Draw[];
 

@@ -4,29 +4,34 @@ import {
   Draw,
   Gacha,
   GachaItem,
+  GachaPityCounter,
   InventoryItem,
   InventoryStatus,
   User,
   WalletTransaction,
+  WalletTransactionReason,
   WalletTransactionType,
 } from '../../entities';
 import { BusinessException } from '../../common/exceptions/business.exception';
 import { ResponseCode } from '../../common/constants/response-code.constant';
 import { CreateDrawDto } from './dto/create-draw.dto';
+import { highestRarity, planDraws } from './draw-engine';
+import { exchangeValueOf, pityProgress } from '../gacha/gacha-economy';
 
 @Injectable()
 export class DrawsService {
   constructor(private readonly dataSource: DataSource) {}
 
   /**
-   * Executes one or more gacha draws (dto.count, default 1) as a single
-   * atomic transaction:
+   * Executes `dto.count` paid draws (default 1) plus their 10+1 bonus
+   * draws as a single atomic transaction:
    *   1. Lock the target user row (SELECT ... FOR UPDATE) to serialize
-   *      concurrent draws/balance checks for the same user.
+   *      concurrent draws/balance checks for the same user. This also
+   *      serializes updates to the user's pity counters.
    *   2. Validate the gacha exists, is active, and has a non-empty pool.
    *   3. Verify the user has sufficient balance for count * gacha.price.
-   *   4. For each draw: pick a result item via weighted random selection,
-   *      insert the Draw record, insert the resulting InventoryItem record.
+   *   4. Resolve every draw (CSPRNG weighted pick, pity guarantee, bonus
+   *      draws), insert the Draw and InventoryItem rows, persist pity.
    *   5. Deduct the total balance once, record a single wallet ledger entry
    *      for the whole batch.
    *   6. Commit. Any failure at any step rolls back all writes.
@@ -38,6 +43,7 @@ export class DrawsService {
       const userRepo = manager.getRepository(User);
       const gachaRepo = manager.getRepository(Gacha);
       const gachaItemRepo = manager.getRepository(GachaItem);
+      const pityRepo = manager.getRepository(GachaPityCounter);
       const drawRepo = manager.getRepository(Draw);
       const inventoryRepo = manager.getRepository(InventoryItem);
       const walletRepo = manager.getRepository(WalletTransaction);
@@ -72,6 +78,7 @@ export class DrawsService {
       const pool = await gachaItemRepo.find({
         where: { gachaId: gacha.id },
         relations: ['item'],
+        order: { id: 'ASC' },
       });
       if (pool.length === 0) {
         throw new BusinessException(
@@ -81,7 +88,7 @@ export class DrawsService {
         );
       }
 
-      // 3. Balance check (total cost for the whole batch).
+      // 3. Balance check (total cost for the paid draws; bonus is free).
       const totalCost = gacha.price * count;
       if (Number(user.coinBalance) < totalCost) {
         throw new BusinessException(
@@ -91,50 +98,49 @@ export class DrawsService {
         );
       }
 
-      // 4. Perform `count` weighted-random draws.
-      const resultItems: Array<{
-        drawId: number;
-        inventoryItemId: number;
-        itemId: number;
-        name: string;
-        rarity: string;
-        estimatedValue: number;
-        imageUrl: string | null;
-        createdAt: Date;
-      }> = [];
+      // 4. Resolve draws against the user's pity progress for this box.
+      const pity =
+        (await pityRepo.findOne({
+          where: { userId: user.id, gachaId: gacha.id },
+        })) ??
+        pityRepo.create({
+          userId: user.id,
+          gachaId: gacha.id,
+          drawsSinceTopTier: 0,
+        });
 
-      for (let i = 0; i < count; i++) {
-        const selected = this.pickWeightedRandom(pool);
+      const plan = planDraws({
+        pool,
+        paidCount: count,
+        pityThreshold: gacha.pityThreshold,
+        drawsSinceTopTier: pity.drawsSinceTopTier,
+      });
 
-        const draw = await drawRepo.save(
+      const draws = await drawRepo.save(
+        plan.draws.map((planned) =>
           drawRepo.create({
             userId: user.id,
             gachaId: gacha.id,
-            spent: gacha.price,
+            spent: planned.isBonus ? 0 : gacha.price,
             currency: gacha.currency,
+            isPity: planned.isPity,
+            isBonus: planned.isBonus,
           }),
-        );
-
-        const inventoryItem = await inventoryRepo.save(
+        ),
+      );
+      const inventoryItems = await inventoryRepo.save(
+        plan.draws.map((planned, i) =>
           inventoryRepo.create({
             userId: user.id,
-            itemId: selected.item.id,
-            drawId: draw.id,
+            itemId: planned.entry.item.id,
+            drawId: draws[i].id,
             status: InventoryStatus.STORED,
           }),
-        );
+        ),
+      );
 
-        resultItems.push({
-          drawId: draw.id,
-          inventoryItemId: inventoryItem.id,
-          itemId: selected.item.id,
-          name: selected.item.name,
-          rarity: selected.item.rarity,
-          estimatedValue: selected.item.estimatedValue,
-          imageUrl: selected.item.imageUrl,
-          createdAt: draw.createdAt,
-        });
-      }
+      pity.drawsSinceTopTier = plan.drawsSinceTopTier;
+      await pityRepo.save(pity);
 
       // 5a. Deduct balance once for the whole batch.
       user.coinBalance = Number(user.coinBalance) - totalCost;
@@ -142,27 +148,52 @@ export class DrawsService {
 
       // 5b. Record a single wallet ledger entry for the whole batch
       // (powers 포인트내역 screen).
+      const bonusLabel =
+        plan.bonusCount > 0 ? ` (+${plan.bonusCount} 보너스)` : '';
       await walletRepo.save(
         walletRepo.create({
           userId: user.id,
           type: WalletTransactionType.USE,
+          reason: WalletTransactionReason.DRAW,
           amount: -totalCost,
           description:
             count > 1
-              ? `${gacha.title} 뽑기 x${count}`
+              ? `${gacha.title} 뽑기 x${count}${bonusLabel}`
               : `${gacha.title} 뽑기`,
           balanceAfter: user.coinBalance,
         }),
       );
 
+      const results = plan.draws.map((planned, i) => {
+        const item = planned.entry.item;
+        return {
+          drawId: draws[i].id,
+          inventoryItemId: inventoryItems[i].id,
+          itemId: item.id,
+          name: item.name,
+          rarity: item.rarity,
+          estimatedValue: item.estimatedValue,
+          exchangeValue: exchangeValueOf(item.estimatedValue),
+          imageUrl: item.imageUrl,
+          isPity: planned.isPity,
+          isBonus: planned.isBonus,
+          createdAt: draws[i].createdAt,
+        };
+      });
+
       return {
         gachaId: gacha.id,
         userId: user.id,
         count,
+        bonusCount: plan.bonusCount,
+        totalResults: results.length,
         spent: totalCost,
         currency: gacha.currency,
         balanceAfter: user.coinBalance,
-        results: resultItems,
+        // Lets the client tint the pre-reveal box by the best actual pull.
+        highestRarity: highestRarity(results.map((r) => r.rarity)),
+        pity: pityProgress(gacha.pityThreshold, plan.drawsSinceTopTier),
+        results,
       };
     });
   }
@@ -172,19 +203,5 @@ export class DrawsService {
     const drawRepo = this.dataSource.getRepository(Draw);
     const totalDrawCount = await drawRepo.count({ where: { userId } });
     return { totalDrawCount };
-  }
-
-  private pickWeightedRandom(pool: GachaItem[]): GachaItem {
-    const totalWeight = pool.reduce((sum, entry) => sum + entry.weight, 0);
-    let roll = Math.random() * totalWeight;
-
-    for (const entry of pool) {
-      roll -= entry.weight;
-      if (roll <= 0) {
-        return entry;
-      }
-    }
-    // Fallback for floating point edge cases.
-    return pool[pool.length - 1];
   }
 }

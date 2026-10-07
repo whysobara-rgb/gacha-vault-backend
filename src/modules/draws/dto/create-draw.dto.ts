@@ -9,7 +9,8 @@ export class CreateDrawDto {
 
   @ApiPropertyOptional({
     example: 1,
-    description: '1회 요청으로 뽑을 횟수 (1~100). 생략 시 1회.',
+    description:
+      '1회 요청으로 결제할 뽑기 횟수 (1~100). 생략 시 1회. 10회마다 1회 무료 보너스 뽑기가 추가됩니다.',
     minimum: 1,
     maximum: 100,
   })

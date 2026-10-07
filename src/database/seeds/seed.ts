@@ -27,10 +27,19 @@ import {
   ShippingRequest,
   ShippingRequestItem,
   WalletTransaction,
+  GachaPityCounter,
+  AttendanceCheckin,
   CurrencyType,
   ItemRarity,
+  WalletTransactionReason,
   WalletTransactionType,
 } from '../../entities';
+import {
+  solveTierWeights,
+  summarizeEconomy,
+} from '../../modules/gacha/gacha-economy';
+import { pickWeighted } from '../../modules/draws/draw-engine';
+import { TARGET_PAYOUT_RATIO } from '../../common/constants/economy.constant';
 
 dotenv.config();
 
@@ -107,7 +116,7 @@ interface ItemDef {
   rarity: ItemRarity;
   estimatedValue: number;
   imageUrl: string;
-  weight: number; // relative weight within the gacha's own pool
+  weight: number; // relative weight within the gacha's own pool (solved)
 }
 
 interface GachaDef {
@@ -121,10 +130,14 @@ interface GachaDef {
   imageUrl: string;
   totalStock: number;
   soldStockBaseline: number;
+  pityThreshold: number | null;
   items: ItemDef[];
 }
 
-/** Builds a standard 4-tier (N/R/SR/SSR) themed item pool for one category. */
+/**
+ * Builds a standard 4-tier (N/R/SR/SSR) themed item pool for one category.
+ * Weights start at 0 and are filled in by balanceDropWeights().
+ */
 function themedPool(
   images: { N: string; R: string; SR: string; SSR: string },
   names: { N: string; R: string; SR: string; SSR: string },
@@ -136,28 +149,28 @@ function themedPool(
       rarity: ItemRarity.N,
       estimatedValue: values.N,
       imageUrl: images.N,
-      weight: 600,
+      weight: 0,
     },
     {
       name: names.R,
       rarity: ItemRarity.R,
       estimatedValue: values.R,
       imageUrl: images.R,
-      weight: 300,
+      weight: 0,
     },
     {
       name: names.SR,
       rarity: ItemRarity.SR,
       estimatedValue: values.SR,
       imageUrl: images.SR,
-      weight: 80,
+      weight: 0,
     },
     {
       name: names.SSR,
       rarity: ItemRarity.SSR,
       estimatedValue: values.SSR,
       imageUrl: images.SSR,
-      weight: 20,
+      weight: 0,
     },
   ];
 }
@@ -165,6 +178,7 @@ function themedPool(
 const gachaDefs: GachaDef[] = [
   {
     title: '명품 시계 박스',
+    pityThreshold: 200,
     tagline: 'PREMIUM HIT!',
     price: 500,
     iconName: 'watch_rounded',
@@ -187,6 +201,7 @@ const gachaDefs: GachaDef[] = [
   },
   {
     title: '애플 대란',
+    pityThreshold: 400,
     tagline: 'TECH ZONE!',
     price: 500,
     iconName: 'phone_iphone',
@@ -209,6 +224,7 @@ const gachaDefs: GachaDef[] = [
   },
   {
     title: '패션 럭키박스',
+    pityThreshold: 200,
     tagline: 'FASHION HIT!',
     price: 500,
     iconName: 'checkroom',
@@ -231,6 +247,7 @@ const gachaDefs: GachaDef[] = [
   },
   {
     title: '뷰티 럭키박스',
+    pityThreshold: 150,
     tagline: 'BEAUTY SPECIAL!',
     price: 500,
     iconName: 'face_retouching_natural',
@@ -253,6 +270,7 @@ const gachaDefs: GachaDef[] = [
   },
   {
     title: '명품 가방 박스',
+    pityThreshold: 150,
     tagline: 'LUXURY BOX',
     price: 750,
     iconName: 'shopping_bag',
@@ -275,6 +293,7 @@ const gachaDefs: GachaDef[] = [
   },
   {
     title: '가전 프리미엄',
+    pityThreshold: 300,
     tagline: 'DIGITAL PRO',
     price: 400,
     iconName: 'devices',
@@ -297,6 +316,7 @@ const gachaDefs: GachaDef[] = [
   },
   {
     title: '식품 랜덤박스',
+    pityThreshold: 250,
     tagline: 'FOOD LUCKY',
     price: 250,
     iconName: 'restaurant',
@@ -319,6 +339,7 @@ const gachaDefs: GachaDef[] = [
   },
   {
     title: '기프티콘 모음',
+    pityThreshold: 250,
     tagline: 'GIFTICON BOX',
     price: 150,
     iconName: 'card_giftcard',
@@ -341,7 +362,46 @@ const gachaDefs: GachaDef[] = [
   },
 ];
 
+/**
+ * Solves every box's drop weights so its pity-adjusted expected item value
+ * is TARGET_PAYOUT_RATIO of the price, instead of hand-tuning odds. Refuses
+ * to seed a box where draw → 포인트 전환 would return more GP than it costs.
+ */
+// Pity thresholds are set so the guarantee delivers roughly a third of
+// each box's SSRs: a safety net, while most SSRs still come naturally.
+function balanceDropWeights() {
+  for (const def of gachaDefs) {
+    const values = Object.fromEntries(
+      def.items.map((item) => [item.rarity, item.estimatedValue]),
+    ) as Record<ItemRarity, number>;
+    const weights = solveTierWeights({
+      values,
+      price: def.price,
+      targetPayoutRatio: TARGET_PAYOUT_RATIO,
+      pityThreshold: def.pityThreshold,
+    });
+    for (const item of def.items) {
+      item.weight = weights[item.rarity];
+    }
+
+    const summary = summarizeEconomy(def.items, def.price, def.pityThreshold);
+    if (summary.exchangeReturnRatio >= 1) {
+      throw new Error(
+        `${def.title}: exchange return ${summary.exchangeReturnRatio} >= 1 (arbitrage)`,
+      );
+    }
+    const pct = (ratio: number) => `${(ratio * 100).toFixed(2)}%`;
+    console.log(
+      `⚖️  ${def.title}: SSR ${pct(weights.SSR / 1_000_000)} ` +
+        `(천장 포함 ${pct(summary.pity.effectiveTopTierRate)}), ` +
+        `환급률 ${pct(summary.payoutRatio)} / 10+1 ${pct(summary.multiDrawPayoutRatio)}`,
+    );
+  }
+}
+
 async function run() {
+  balanceDropWeights();
+
   const dataSource = new DataSource({
     type: 'postgres',
     host: process.env.DB_HOST,
@@ -359,6 +419,8 @@ async function run() {
       ShippingRequest,
       ShippingRequestItem,
       WalletTransaction,
+      GachaPityCounter,
+      AttendanceCheckin,
     ],
     synchronize: true,
   });
@@ -392,6 +454,7 @@ async function run() {
       walletRepo.create({
         userId: demoUser.id,
         type: WalletTransactionType.EARN,
+        reason: WalletTransactionReason.SIGNUP_BONUS,
         amount: STARTING_BALANCE,
         description: '회원가입 축하 GP',
         balanceAfter: STARTING_BALANCE,
@@ -405,6 +468,7 @@ async function run() {
       walletRepo.create({
         userId: demoUser.id,
         type: WalletTransactionType.EARN,
+        reason: WalletTransactionReason.ADJUSTMENT,
         amount: topup,
         description: 'GP 충전 (seed 재보충)',
         balanceAfter: STARTING_BALANCE,
@@ -532,6 +596,7 @@ async function run() {
           imageUrl: def.imageUrl,
           totalStock: def.totalStock,
           soldStockBaseline: def.soldStockBaseline,
+          pityThreshold: def.pityThreshold,
         }),
       );
       console.log(`🎰 Created gacha: ${def.title}`);
@@ -546,6 +611,7 @@ async function run() {
       gacha.imageUrl = def.imageUrl;
       gacha.totalStock = def.totalStock;
       gacha.soldStockBaseline = def.soldStockBaseline;
+      gacha.pityThreshold = def.pityThreshold;
       gacha.description = def.description;
       await gachaRepo.save(gacha);
     }
@@ -605,17 +671,8 @@ async function run() {
       relations: ['item'],
     });
     for (let d = 0; d < drawCount; d++) {
-      // Weighted-ish pick: mostly N/R, occasionally SR/SSR for realism.
-      const roll = Math.random() * 1000;
-      let picked = pool[0];
-      let cumulative = 0;
-      for (const entry of pool) {
-        cumulative += entry.weight;
-        if (roll <= cumulative) {
-          picked = entry;
-          break;
-        }
-      }
+      // Same weighted pick as real draws, so the history matches the odds.
+      const picked = pickWeighted(pool);
       const draw = await drawRepo.save(
         drawRepo.create({
           userId: user.id,

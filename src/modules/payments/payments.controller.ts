@@ -61,7 +61,7 @@ export class PaymentsController {
     summary: '결제 승인',
     description:
       '결제위젯 성공 후 호출합니다. 주문 금액 검증 → 토스 승인 → GP 지급(첫 충전 보너스 포함). ' +
-      '10015(확인 중)이면 같은 값으로 다시 호출하면 됩니다. 이미 승인된 주문은 같은 결과를 반환합니다.',
+      '10016(승인 확인 중)이면 같은 값으로 다시 호출하면 됩니다. 이미 승인된 주문은 같은 결과를 반환합니다.',
   })
   confirm(
     @CurrentUser() user: AuthenticatedUser,

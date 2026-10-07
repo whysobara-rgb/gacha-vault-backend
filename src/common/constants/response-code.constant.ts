@@ -18,6 +18,9 @@ export enum ResponseCode {
   SOCIAL_PROVIDER_UNAVAILABLE = 10012,
   ACTIVE_SHIPMENTS = 10013,
   PAYMENT_FAILED = 10014,
+  /** Payments are not configured on this server. */
   PAYMENT_UNAVAILABLE = 10015,
+  /** Approval outcome not known yet; retry confirm with the same values. */
+  PAYMENT_PENDING = 10016,
   INTERNAL_ERROR = 10099,
 }

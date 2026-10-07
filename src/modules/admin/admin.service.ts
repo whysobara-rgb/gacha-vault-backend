@@ -335,11 +335,7 @@ export class AdminService {
       .getRepository(Banner)
       .find({ order: { priority: 'ASC', id: 'ASC' } });
     return {
-      items: rows.map((b) => ({
-        ...toBannerResponse(b),
-        active: b.active,
-        priority: b.priority,
-      })),
+      items: rows.map(toAdminBanner),
     };
   }
 
@@ -354,7 +350,7 @@ export class AdminService {
     const repo = this.dataSource.getRepository(Banner);
     const banner = repo.create();
     await this.applyBanner(banner, dto);
-    return toBannerResponse(await repo.save(banner));
+    return toAdminBanner(await repo.save(banner));
   }
 
   async updateBanner(id: number, dto: SaveBannerDto) {
@@ -362,7 +358,7 @@ export class AdminService {
     const banner = await repo.findOne({ where: { id } });
     if (!banner) throw notFound('Banner');
     await this.applyBanner(banner, dto);
-    return toBannerResponse(await repo.save(banner));
+    return toAdminBanner(await repo.save(banner));
   }
 
   private async applyBanner(banner: Banner, dto: SaveBannerDto) {
@@ -480,6 +476,14 @@ export class AdminService {
       })),
     };
   }
+}
+
+function toAdminBanner(banner: Banner) {
+  return {
+    ...toBannerResponse(banner),
+    active: banner.active,
+    priority: banner.priority,
+  };
 }
 
 function notFound(what: string) {

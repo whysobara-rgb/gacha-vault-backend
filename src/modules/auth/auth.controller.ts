@@ -5,8 +5,11 @@ import {
   HttpCode,
   HttpStatus,
   Post,
+  Res,
 } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ConfigService } from '@nestjs/config';
+import { Response } from 'express';
+import { ApiExcludeEndpoint, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
@@ -15,7 +18,10 @@ import { SocialLoginDto } from './dto/social-login.dto';
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly configService: ConfigService,
+  ) {}
 
   @Post('signup')
   @HttpCode(HttpStatus.CREATED)
@@ -58,5 +64,30 @@ export class AuthController {
   })
   socialLogin(@Body() dto: SocialLoginDto) {
     return this.authService.socialLogin(dto);
+  }
+
+  /**
+   * Sign in with Apple on Android/web: Apple POSTs the result here
+   * (form_post), and we hand it back to the app through the intent URL the
+   * sign_in_with_apple plugin listens for. The identity token is still
+   * verified by POST /auth/social-login like any other.
+   */
+  @Post('apple/callback')
+  @ApiExcludeEndpoint()
+  appleCallback(@Body() body: Record<string, unknown>, @Res() res: Response) {
+    const pkg =
+      this.configService.get<string>('APPLE_ANDROID_PACKAGE') ??
+      'com.gachavault.gacha';
+    const params = new URLSearchParams();
+    for (const key of ['code', 'id_token', 'state', 'user']) {
+      const value = body?.[key];
+      if (typeof value === 'string' && value.length <= 8192) {
+        params.set(key, value);
+      }
+    }
+    res.redirect(
+      307,
+      `intent://callback?${params.toString()}#Intent;package=${pkg};scheme=signinwithapple;end`,
+    );
   }
 }

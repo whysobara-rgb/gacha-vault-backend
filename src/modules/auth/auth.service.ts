@@ -65,6 +65,7 @@ export class AuthService {
     });
 
     return {
+      ...(await this.issueToken(saved)),
       id: saved.id,
       email: saved.email,
       nickname: saved.nickname,

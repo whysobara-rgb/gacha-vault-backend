@@ -418,7 +418,7 @@ function paymentFailed(message: string, errors: string[] = []) {
 /** Outcome unknown for now; the client may retry confirm with the same data. */
 function pending(err: unknown) {
   return new BusinessException(
-    ResponseCode.PAYMENT_UNAVAILABLE,
+    ResponseCode.PAYMENT_PENDING,
     'Payment is still being confirmed; retry shortly',
     HttpStatus.SERVICE_UNAVAILABLE,
     [err instanceof TossUnavailableError ? 'toss:unavailable' : 'toss:pending'],

@@ -35,7 +35,7 @@ npm run start:dev             # http://localhost:3000, Swagger: /docs
 | 출석체크 | 7일 주기 100/100/150/150/200/200/500 GP, 하루 빠지면 1일차부터 | `ATTENDANCE_REWARDS` |
 | 가입 축하 | 신규 가입 시 3,000 GP | `WELCOME_GP` |
 | 충전 | 토스페이먼츠, 패키지 5천~30만원 (5만원 이상 대량 보너스), 첫 충전 +20% (최대 10,000 GP) | `TOPUP_PACKAGES`, `FIRST_TOPUP_BONUS` |
-| 월 충전 한도 | 유저가 직접 설정. 낮추면 즉시, 올리거나 해제하면 7일 뒤 적용. 실제 결제액만 집계 | `modules/wallet/topup-limit.ts` |
+| 월 충전 한도 | 유저가 직접 설정. 낮추면 즉시, 올리거나 해제하면 7일 뒤 적용. 충전(TOPUP)액만 집계하고 보너스는 제외 (개발 환경의 데모 충전도 충전으로 집계) | `modules/wallet/topup-limit.ts` |
 
 경제 파라미터는 모두 `src/common/constants/economy.constant.ts`에 있습니다. 확률 공시 API로 그대로 노출되는 값이므로 환경 변수가 아니라 코드로 관리합니다. 1 GP = 1원입니다.
 
@@ -85,7 +85,7 @@ npm run start:dev             # http://localhost:3000, Swagger: /docs
 
 동작 원칙:
 - 서버는 주문 금액과 월 한도를 다시 확인하고 토스 승인 후에만 GP를 지급합니다. 같은 주문을 다시 승인해도 결과만 돌려줍니다.
-- 토스 응답이 없으면 `10015`가 납니다. 같은 값으로 재호출하거나 토스 웹훅(`POST /payments/webhook`)이 오면 서버가 토스에서 결제를 다시 조회해 완료합니다.
+- 토스 응답이 없으면 `10016`이 납니다. 같은 값으로 재호출하거나 토스 웹훅(`POST /payments/webhook`)이 오면 서버가 토스에서 결제를 다시 조회해 완료합니다.
 - 토스가 다른 금액을 승인하는 등 이상 건은 지급하지 않고 운영자 확인 목록에 올립니다.
 - 운영 환경(`NODE_ENV=production`)에서는 데모 충전(`POST /wallet/topup`)이 막힙니다.
 
@@ -128,7 +128,8 @@ npm run start:dev             # http://localhost:3000, Swagger: /docs
 | 10012 | 소셜 로그인 사용 불가 |
 | 10013 | 배송 진행 중이라 탈퇴 불가 |
 | 10014 | 결제 실패 |
-| 10015 | 결제 확인 중/결제 미설정 |
+| 10015 | 결제 미설정 |
+| 10016 | 결제 승인 확인 중 (같은 값으로 재호출) |
 
 ## 출시 전 체크리스트
 

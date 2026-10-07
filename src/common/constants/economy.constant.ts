@@ -43,3 +43,12 @@ export const ATTENDANCE_REWARDS = [100, 100, 150, 150, 200, 200, 500];
  * after this cooling-off period. Lowering it is immediate.
  */
 export const TOPUP_LIMIT_INCREASE_DELAY_DAYS = 7;
+
+/** GP credited once when an account is created (email or social). */
+export const WELCOME_GP = 3000;
+
+/**
+ * 첫 충전 보너스: extra GP on a user's first successful payment, as a share
+ * of the GP bought, capped.
+ */
+export const FIRST_TOPUP_BONUS = { rate: 0.2, maxGp: 10000 } as const;

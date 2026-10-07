@@ -9,6 +9,12 @@ import {
 import { Draw } from './draw.entity';
 import { InventoryItem } from './inventory-item.entity';
 
+export enum UserRole {
+  USER = 'USER',
+  /** Operators: shipping, boxes, banners and stats under /admin. */
+  ADMIN = 'ADMIN',
+}
+
 export enum AuthProvider {
   EMAIL = 'EMAIL',
   KAKAO = 'KAKAO',
@@ -36,6 +42,9 @@ export class User {
   @Column({ type: 'bigint', default: 0 })
   coinBalance: number;
 
+  @Column({ type: 'enum', enum: UserRole, default: UserRole.USER })
+  role: UserRole;
+
   @Column({
     type: 'enum',
     enum: AuthProvider,
@@ -62,6 +71,24 @@ export class User {
 
   @Column({ type: 'timestamptz', nullable: true })
   pendingTopupLimitEffectiveAt: Date | null;
+
+  /**
+   * When the user accepted the required terms: 이용약관, 개인정보 수집·이용,
+   * and being 만 14세 이상. Null for accounts created before consent existed.
+   */
+  @Column({ type: 'timestamptz', nullable: true })
+  termsAgreedAt: Date | null;
+
+  /** Optional 마케팅 수신 동의; null when not agreed or withdrawn. */
+  @Column({ type: 'timestamptz', nullable: true })
+  marketingAgreedAt: Date | null;
+
+  /**
+   * Set on 회원 탈퇴. The row is kept (payment and order records must be
+   * retained) but personal data is wiped and the account can't sign in.
+   */
+  @Column({ type: 'timestamptz', nullable: true })
+  deletedAt: Date | null;
 
   @OneToMany(() => Draw, (draw) => draw.user)
   draws: Draw[];

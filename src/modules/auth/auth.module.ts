@@ -7,6 +7,7 @@ import { User } from '../../entities';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { SocialVerifier } from './social/social-verifier';
 
 @Module({
   imports: [
@@ -17,13 +18,15 @@ import { JwtStrategy } from './strategies/jwt.strategy';
       useFactory: (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET'),
         signOptions: {
-          expiresIn: Number(configService.get<string>('JWT_EXPIRES_IN') ?? 3600),
+          expiresIn: Number(
+            configService.get<string>('JWT_EXPIRES_IN') ?? 3600,
+          ),
         },
       }),
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
+  providers: [AuthService, JwtStrategy, SocialVerifier],
   exports: [JwtModule],
 })
 export class AuthModule {}

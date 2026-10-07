@@ -16,7 +16,11 @@ import { BusinessException } from '../../common/exceptions/business.exception';
 import { ResponseCode } from '../../common/constants/response-code.constant';
 import { CreateDrawDto } from './dto/create-draw.dto';
 import { highestRarity, planDraws } from './draw-engine';
-import { exchangeValueOf, pityProgress } from '../gacha/gacha-economy';
+import {
+  bonusDrawsFor,
+  exchangeValueOf,
+  pityProgress,
+} from '../gacha/gacha-economy';
 
 @Injectable()
 export class DrawsService {
@@ -29,12 +33,15 @@ export class DrawsService {
    *      concurrent draws/balance checks for the same user. This also
    *      serializes updates to the user's pity counters.
    *   2. Validate the gacha exists, is active, and has a non-empty pool.
-   *   3. Verify the user has sufficient balance for count * gacha.price.
+   *   3. Verify the user has sufficient balance for count * gacha.price
+   *      and the box has stock left for the paid + bonus draws.
    *   4. Resolve every draw (CSPRNG weighted pick, pity guarantee, bonus
    *      draws), insert the Draw and InventoryItem rows, persist pity.
    *   5. Deduct the total balance once, record a single wallet ledger entry
    *      for the whole batch.
-   *   6. Commit. Any failure at any step rolls back all writes.
+   *   6. Claim the stock with a guarded atomic UPDATE (last, so the gacha
+   *      row lock is held only until commit), then commit. Any failure at
+   *      any step rolls back all writes.
    */
   async createDraw(userId: number, dto: CreateDrawDto) {
     const count = dto.count ?? 1;
@@ -96,6 +103,12 @@ export class DrawsService {
           'Insufficient balance',
           HttpStatus.BAD_REQUEST,
         );
+      }
+
+      // Fast stock check; the authoritative one is the guarded UPDATE in 6.
+      const boxesNeeded = count + bonusDrawsFor(count);
+      if (gacha.soldCount + boxesNeeded > gacha.totalStock) {
+        throw soldOut(gacha.totalStock - gacha.soldCount);
       }
 
       // 4. Resolve draws against the user's pity progress for this box.
@@ -164,6 +177,23 @@ export class DrawsService {
         }),
       );
 
+      // 6. Claim stock atomically; a concurrent buyer may have taken it.
+      const claimed = await gachaRepo
+        .createQueryBuilder()
+        .update(Gacha)
+        .set({ soldCount: () => '"soldCount" + :n' })
+        .where('id = :id AND "soldCount" + :n <= "totalStock"')
+        .setParameters({ id: gacha.id, n: plan.draws.length })
+        .returning(['soldCount'])
+        .execute();
+      if (!claimed.affected) {
+        const latest = await gachaRepo.findOneOrFail({
+          where: { id: gacha.id },
+        });
+        throw soldOut(latest.totalStock - latest.soldCount);
+      }
+      const soldCount: number = claimed.raw[0].soldCount;
+
       const results = plan.draws.map((planned, i) => {
         const item = planned.entry.item;
         return {
@@ -193,6 +223,11 @@ export class DrawsService {
         // Lets the client tint the pre-reveal box by the best actual pull.
         highestRarity: highestRarity(results.map((r) => r.rarity)),
         pity: pityProgress(gacha.pityThreshold, plan.drawsSinceTopTier),
+        stock: {
+          totalStock: gacha.totalStock,
+          soldStock: soldCount,
+          remaining: gacha.totalStock - soldCount,
+        },
         results,
       };
     });
@@ -204,4 +239,14 @@ export class DrawsService {
     const totalDrawCount = await drawRepo.count({ where: { userId } });
     return { totalDrawCount };
   }
+}
+
+function soldOut(remaining: number) {
+  const left = Math.max(0, remaining);
+  return new BusinessException(
+    ResponseCode.SOLD_OUT,
+    left === 0 ? 'Sold out' : `Only ${left} boxes left`,
+    HttpStatus.CONFLICT,
+    [`remaining:${left}`],
+  );
 }

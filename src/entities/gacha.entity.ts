@@ -61,20 +61,18 @@ export class Gacha {
   imageUrl: string | null;
 
   /**
-   * 이번 시즌/회차 한정 총 재고 수량. 상세페이지의 "OOO/전체" 진행률 표시에 사용.
+   * 이번 회차에 판매하는 박스 수. soldCount가 여기에 도달하면 품절되어
+   * 더 이상 뽑을 수 없다. 상세페이지의 "OOO/전체" 진행률 표시에 사용.
    */
   @Column({ type: 'int', default: 10000 })
   totalStock: number;
 
   /**
-   * 판매(개봉) 수량의 기준값(baseline). 실제 서비스 초기에는 draws 테이블의
-   * 실제 뽑기 기록이 적을 수 있으므로, 이미 판매된 것으로 간주하는 기준
-   * 수량을 박스마다 다르게 설정해 "OOO/전체" 표시가 박스별로 자연스럽게
-   * 다른 값을 갖도록 한다. 최종 판매 수량 = soldStockBaseline + 실제 draws 카운트
-   * 이므로, 실제 구매가 발생할 때마다 값이 함께 올라가는 진짜 "실시간" 값이 된다.
+   * 실제로 열린 박스 수(보너스 뽑기 포함). 뽑기 트랜잭션이 원자적으로
+   * 증가시키며, totalStock을 넘을 수 없다.
    */
   @Column({ type: 'int', default: 0 })
-  soldStockBaseline: number;
+  soldCount: number;
 
   /**
    * 천장: the Nth consecutive draw without an SSR is guaranteed to be SSR.

@@ -1,7 +1,7 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Gacha, GachaItem, GachaPityCounter, Draw } from '../../entities';
+import { Gacha, GachaItem, GachaPityCounter } from '../../entities';
 import { ListGachasQueryDto } from './dto/list-gachas.query.dto';
 import { BusinessException } from '../../common/exceptions/business.exception';
 import { ResponseCode } from '../../common/constants/response-code.constant';
@@ -19,6 +19,15 @@ import {
   totalWeight,
 } from './gacha-economy';
 
+/** Real round stock: soldStock only counts boxes that were actually opened. */
+function stockOf(gacha: Gacha) {
+  return {
+    totalStock: gacha.totalStock,
+    soldStock: gacha.soldCount,
+    soldOut: gacha.soldCount >= gacha.totalStock,
+  };
+}
+
 /** Ratio (0..1) → percent rounded to 4 decimals, e.g. 0.0068667 → 0.6867. */
 function toPercent(ratio: number): number {
   return Math.round(ratio * 1_000_000) / 10_000;
@@ -31,8 +40,6 @@ export class GachaService {
     private readonly gachaRepository: Repository<Gacha>,
     @InjectRepository(GachaItem)
     private readonly gachaItemRepository: Repository<GachaItem>,
-    @InjectRepository(Draw)
-    private readonly drawRepository: Repository<Draw>,
     @InjectRepository(GachaPityCounter)
     private readonly pityRepository: Repository<GachaPityCounter>,
   ) {}
@@ -62,6 +69,7 @@ export class GachaService {
         accentColorHex: gacha.accentColorHex,
         imageUrl: gacha.imageUrl,
         pityThreshold: gacha.pityThreshold,
+        ...stockOf(gacha),
       })),
       page,
       limit,
@@ -70,8 +78,8 @@ export class GachaService {
   }
 
   /**
-   * Gacha detail: real-time sold stock (soldStockBaseline + live draw count
-   * for this gacha) plus the actual drop-pool lineup (item name/rarity/
+   * Gacha detail: real sold stock (boxes actually opened this round) plus
+   * the actual drop-pool lineup (item name/rarity/
    * image/weight), so the Flutter "LUCKY LINEUP" section always reflects
    * exactly what can be won from *this* specific box — never a hardcoded
    * generic list.
@@ -79,16 +87,8 @@ export class GachaService {
   async findOne(id: number) {
     const gacha = await this.getGachaOrThrow(id);
 
-    const [liveDrawCount, pool] = await Promise.all([
-      this.drawRepository.count({ where: { gachaId: gacha.id } }),
-      this.loadPool(gacha.id),
-    ]);
+    const pool = await this.loadPool(gacha.id);
     const poolWeight = totalWeight(pool);
-
-    const soldStock = Math.min(
-      gacha.totalStock,
-      gacha.soldStockBaseline + liveDrawCount,
-    );
 
     // Rarity rank drives lineup display order: rarest first, like TIF's
     // "LUCKY LINEUP" hero-first layout.
@@ -117,8 +117,7 @@ export class GachaService {
       badgeLabel: gacha.badgeLabel,
       accentColorHex: gacha.accentColorHex,
       imageUrl: gacha.imageUrl,
-      totalStock: gacha.totalStock,
-      soldStock,
+      ...stockOf(gacha),
       pityThreshold: gacha.pityThreshold,
       lineup,
     };

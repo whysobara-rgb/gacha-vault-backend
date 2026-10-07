@@ -5,10 +5,9 @@
  *     the gacha's category (시계/스마트폰/가방/패션/뷰티/가전/식품/기프티콘).
  *     This keeps the "LUCKY LINEUP" shown in the Flutter detail page
  *     honest: what you see is what can actually drop from that box.
- *   - Realistic totalStock / soldStockBaseline per box so the "실시간 재고"
- *     progress bar isn't a hardcoded constant — actual sold count is
- *     soldStockBaseline + live COUNT(draws) for that gacha (computed in
- *     GachaService.findOne), so it increases in real time as people draw.
+ *   - A totalStock (boxes for sale this round) per box. soldCount is the
+ *     number of boxes actually opened; draws stop when it reaches totalStock.
+ *   - Drop weights solved for TARGET_PAYOUT_RATIO (see balanceDropWeights).
  *   - 1 demo user (demo@gachivault.com / Password1) with a GP balance
  *   - An initial WalletTransaction (EARN) recording the starting balance
  *
@@ -38,7 +37,6 @@ import {
   solveTierWeights,
   summarizeEconomy,
 } from '../../modules/gacha/gacha-economy';
-import { pickWeighted } from '../../modules/draws/draw-engine';
 import { TARGET_PAYOUT_RATIO } from '../../common/constants/economy.constant';
 
 dotenv.config();
@@ -129,7 +127,6 @@ interface GachaDef {
   description: string;
   imageUrl: string;
   totalStock: number;
-  soldStockBaseline: number;
   pityThreshold: number | null;
   items: ItemDef[];
 }
@@ -187,7 +184,6 @@ const gachaDefs: GachaDef[] = [
     description: '스틸 데일리워치부터 스위스 무브먼트 리미티드 워치까지, 시계 마니아를 위한 프리미엄 박스',
     imageUrl: IMG.watch.hero,
     totalStock: 5000,
-    soldStockBaseline: 3120,
     items: themedPool(
       IMG.watch,
       {
@@ -210,7 +206,6 @@ const gachaDefs: GachaDef[] = [
     description: '보호필름부터 최신형 플래그십 스마트폰까지, 테크 러버를 위한 디지털 기기 박스',
     imageUrl: IMG.phone.hero,
     totalStock: 8000,
-    soldStockBaseline: 6420,
     items: themedPool(
       IMG.phone,
       {
@@ -233,7 +228,6 @@ const gachaDefs: GachaDef[] = [
     description: '베이직 캔버스화부터 컬래버 한정판 스니커즈까지, 트렌디한 스트릿 패션 박스',
     imageUrl: IMG.fashion.hero,
     totalStock: 10000,
-    soldStockBaseline: 4890,
     items: themedPool(
       IMG.fashion,
       {
@@ -256,7 +250,6 @@ const gachaDefs: GachaDef[] = [
     description: '미니 향수부터 프리미엄 뷰티 컬렉션까지, 뷰티 러버를 위한 코스메틱 박스',
     imageUrl: IMG.beauty.hero,
     totalStock: 12000,
-    soldStockBaseline: 7010,
     items: themedPool(
       IMG.beauty,
       {
@@ -279,7 +272,6 @@ const gachaDefs: GachaDef[] = [
     description: '캔버스 파우치부터 리미티드 컬렉션 토트백까지, 명품 가방이 포함된 럭셔리 박스',
     imageUrl: IMG.bag.hero,
     totalStock: 3000,
-    soldStockBaseline: 1870,
     items: themedPool(
       IMG.bag,
       {
@@ -302,7 +294,6 @@ const gachaDefs: GachaDef[] = [
     description: '휴대용 미니 가전부터 프리미엄 가전 풀세트까지, 실속있는 홈 가전 박스',
     imageUrl: IMG.devices.hero,
     totalStock: 6000,
-    soldStockBaseline: 2430,
     items: themedPool(
       IMG.devices,
       {
@@ -325,7 +316,6 @@ const gachaDefs: GachaDef[] = [
     description: '미니 간식 세트부터 프리미엄 정찬 코스까지, 맛있는 식품 랜덤박스',
     imageUrl: IMG.food.hero,
     totalStock: 15000,
-    soldStockBaseline: 9260,
     items: themedPool(
       IMG.food,
       {
@@ -348,7 +338,6 @@ const gachaDefs: GachaDef[] = [
     description: '커피 기프티콘부터 백화점 상품권까지, 부담없이 즐기는 기프티콘 박스',
     imageUrl: IMG.gifticon.hero,
     totalStock: 20000,
-    soldStockBaseline: 13580,
     items: themedPool(
       IMG.gifticon,
       {
@@ -479,35 +468,18 @@ async function run() {
     console.log('👤 Demo user already exists, skipping.');
   }
 
-  // --- A handful of extra "leaderboard" demo users so /rankings/users
-  // isn't a single-row list. These are display-only demo accounts
-  // (no login flow expected) with pre-seeded lifetime draw stats via
-  // synthetic Draw rows below.
-  const leaderboardNicknames = [
-    '가치왕뽑기',
-    '럭키드로우',
-    '가차홀릭',
-    '박스마스터',
-    '한방인생',
-    '데일리가차',
-    '컬렉터준',
-    '골드핸드',
-  ];
-  const leaderboardUsers: User[] = [];
-  for (const nickname of leaderboardNicknames) {
-    const email = `${nickname.toLowerCase()}@demo.gachivault.com`;
-    let user = await userRepo.findOne({ where: { email } });
-    if (!user) {
-      user = await userRepo.save(
-        userRepo.create({
-          email,
-          password: null,
-          nickname,
-          coinBalance: 0,
-        }),
-      );
-    }
-    leaderboardUsers.push(user);
+  // Earlier versions of this seed created display-only accounts
+  // (*@demo.gachivault.com, no password) with synthetic draw history that
+  // showed up in rankings and the live win feed as if it were real. Their
+  // draws, items and ledger rows go with them (ON DELETE CASCADE).
+  const removed = await userRepo
+    .createQueryBuilder()
+    .delete()
+    .where('email LIKE :domain', { domain: '%@demo.gachivault.com' })
+    .andWhere('password IS NULL')
+    .execute();
+  if (removed.affected) {
+    console.log(`🧹 Removed ${removed.affected} synthetic ranking accounts.`);
   }
 
   // --- Items -----------------------------------------------------------
@@ -595,7 +567,6 @@ async function run() {
           accentColorHex: def.accentColorHex,
           imageUrl: def.imageUrl,
           totalStock: def.totalStock,
-          soldStockBaseline: def.soldStockBaseline,
           pityThreshold: def.pityThreshold,
         }),
       );
@@ -610,7 +581,6 @@ async function run() {
       gacha.currency = CurrencyType.GP;
       gacha.imageUrl = def.imageUrl;
       gacha.totalStock = def.totalStock;
-      gacha.soldStockBaseline = def.soldStockBaseline;
       gacha.pityThreshold = def.pityThreshold;
       gacha.description = def.description;
       await gachaRepo.save(gacha);
@@ -634,66 +604,11 @@ async function run() {
 
   console.log('🔗 Linked gacha pools.');
 
-  // --- Synthetic leaderboard draw history --------------------------------
-  // Gives /rankings/users something realistic to rank by lifetime draw
-  // count & total won value, without requiring real user activity.
-  const drawRepo = dataSource.getRepository(Draw);
-  const inventoryRepo = dataSource.getRepository(InventoryItem);
-  let seededAnyRankingDraws = false;
-  for (let i = 0; i < leaderboardUsers.length; i++) {
-    const user = leaderboardUsers[i];
-
-    // 항상 최신 아이템 풀 기준으로 재시딩한다. (이전에 삭제된 구식/제네릭
-    // 플레이스홀더 아이템을 참조하는 이력이 남아있으면 /rankings/wins에
-    // "N 등급 가치 카드" 같은 깨진 데이터가 노출되므로, 기존 이력을 지우고
-    // 매번 새로 생성해 항상 실제 테마 아이템만 남도록 한다.)
-    const existingDraws = await drawRepo.find({ where: { userId: user.id } });
-    if (existingDraws.length > 0) {
-      const drawIds = existingDraws.map((d) => d.id);
-      await inventoryRepo
-        .createQueryBuilder()
-        .delete()
-        .where('drawId IN (:...ids)', { ids: drawIds })
-        .execute();
-      await drawRepo
-        .createQueryBuilder()
-        .delete()
-        .where('id IN (:...ids)', { ids: drawIds })
-        .execute();
-    }
-
-    seededAnyRankingDraws = true;
-    // Higher-ranked demo users get more draws (descending by index).
-    const drawCount = 180 - i * 18; // 180,162,...,54
-    const gacha = savedGachas[i % savedGachas.length];
-    const pool = await gachaItemRepo.find({
-      where: { gachaId: gacha.id },
-      relations: ['item'],
-    });
-    for (let d = 0; d < drawCount; d++) {
-      // Same weighted pick as real draws, so the history matches the odds.
-      const picked = pickWeighted(pool);
-      const draw = await drawRepo.save(
-        drawRepo.create({
-          userId: user.id,
-          gachaId: gacha.id,
-          spent: gacha.price,
-          currency: gacha.currency,
-        }),
-      );
-      await inventoryRepo.save(
-        inventoryRepo.create({
-          userId: user.id,
-          itemId: picked.item.id,
-          drawId: draw.id,
-        }),
-      );
-    }
-    console.log(`🏆 Seeded ${drawCount} historical draws for ${user.nickname}`);
-  }
-  if (!seededAnyRankingDraws) {
-    console.log('🏆 Leaderboard draw history already seeded, skipping.');
-  }
+  // soldCount must equal the boxes actually opened (no baseline padding).
+  await dataSource.query(
+    `UPDATE "gachas" g SET "soldCount" =
+       (SELECT COUNT(*) FROM "draws" d WHERE d."gacha_id" = g."id")`,
+  );
 
   await dataSource.destroy();
   console.log('✅ Seeding complete.');

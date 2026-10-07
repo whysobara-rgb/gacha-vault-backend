@@ -3,6 +3,7 @@ import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import {
   AttendanceCheckin,
   Banner,
+  PaymentOrder,
   Gacha,
   GachaItem,
   GachaPityCounter,
@@ -28,6 +29,7 @@ const entities = [
   GachaPityCounter,
   AttendanceCheckin,
   Banner,
+  PaymentOrder,
 ];
 
 export const buildTypeOrmConfig = (

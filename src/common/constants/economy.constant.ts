@@ -52,3 +52,18 @@ export const WELCOME_GP = 3000;
  * of the GP bought, capped.
  */
 export const FIRST_TOPUP_BONUS = { rate: 0.2, maxGp: 10000 } as const;
+
+/**
+ * GP packages sold through the payment gateway (price in 원). bonusGp is a
+ * volume bonus on larger packs, credited separately from the purchased GP.
+ */
+export const TOPUP_PACKAGES = [
+  { id: 'gp5000', price: 5000, gp: 5000, bonusGp: 0 },
+  { id: 'gp10000', price: 10000, gp: 10000, bonusGp: 0 },
+  { id: 'gp30000', price: 30000, gp: 30000, bonusGp: 0 },
+  { id: 'gp50000', price: 50000, gp: 50000, bonusGp: 1000 },
+  { id: 'gp100000', price: 100000, gp: 100000, bonusGp: 3000 },
+  { id: 'gp300000', price: 300000, gp: 300000, bonusGp: 15000 },
+] as const;
+
+export type TopupPackage = (typeof TOPUP_PACKAGES)[number];

@@ -17,6 +17,8 @@ export enum WalletTransactionType {
 /** Why the balance changed. Monthly top-up limits sum only TOPUP rows. */
 export enum WalletTransactionReason {
   TOPUP = 'TOPUP',
+  /** Package volume bonus or 첫 충전 bonus; not counted toward limits. */
+  BONUS = 'BONUS',
   SIGNUP_BONUS = 'SIGNUP_BONUS',
   ATTENDANCE = 'ATTENDANCE',
   EXCHANGE = 'EXCHANGE',

@@ -1,4 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { DataSource, EntityManager } from 'typeorm';
 import {
   User,
@@ -20,7 +21,10 @@ import { startOfKstMonth } from '../../common/utils/kst-date';
 
 @Injectable()
 export class WalletService {
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(
+    private readonly dataSource: DataSource,
+    private readonly configService: ConfigService,
+  ) {}
 
   async getBalance(userId: number) {
     const userRepo = this.dataSource.getRepository(User);
@@ -74,22 +78,15 @@ export class WalletService {
       const userRepo = manager.getRepository(User);
       const walletRepo = manager.getRepository(WalletTransaction);
 
-      const user = await this.lockUser(manager, userId);
-      const now = new Date();
-      await this.applyDueLimitChange(manager, user, now);
-
-      if (user.monthlyTopupLimit !== null) {
-        const used = await this.sumTopupsThisMonth(manager, user.id, now);
-        const remaining = Math.max(0, user.monthlyTopupLimit - used);
-        if (dto.amount > remaining) {
-          throw new BusinessException(
-            ResponseCode.TOPUP_LIMIT_EXCEEDED,
-            `Monthly top-up limit exceeded (remaining ${remaining} GP)`,
-            HttpStatus.BAD_REQUEST,
-            [`remaining:${remaining}`],
-          );
-        }
+      if (this.configService.get<string>('NODE_ENV') === 'production') {
+        throw new BusinessException(
+          ResponseCode.FORBIDDEN,
+          'Demo top-up is disabled in production; use /payments',
+          HttpStatus.FORBIDDEN,
+        );
       }
+      const user = await this.lockUser(manager, userId);
+      await this.assertTopupAllowed(manager, user, dto.amount);
 
       user.coinBalance = Number(user.coinBalance) + dto.amount;
       await userRepo.save(user);
@@ -136,7 +133,27 @@ export class WalletService {
     });
   }
 
-  private async lockUser(manager: EntityManager, userId: number) {
+  /**
+   * Refuses a top-up of `amount` that would exceed the user's own monthly
+   * limit. Call with the user row locked (see lockUser).
+   */
+  async assertTopupAllowed(manager: EntityManager, user: User, amount: number) {
+    const now = new Date();
+    await this.applyDueLimitChange(manager, user, now);
+    if (user.monthlyTopupLimit === null) return;
+    const used = await this.sumTopupsThisMonth(manager, user.id, now);
+    const remaining = Math.max(0, user.monthlyTopupLimit - used);
+    if (amount > remaining) {
+      throw new BusinessException(
+        ResponseCode.TOPUP_LIMIT_EXCEEDED,
+        `Monthly top-up limit exceeded (remaining ${remaining} GP)`,
+        HttpStatus.BAD_REQUEST,
+        [`remaining:${remaining}`],
+      );
+    }
+  }
+
+  async lockUser(manager: EntityManager, userId: number) {
     const user = await manager
       .getRepository(User)
       .createQueryBuilder('user')

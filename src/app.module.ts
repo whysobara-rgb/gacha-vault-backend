@@ -14,6 +14,7 @@ import { WalletModule } from './modules/wallet/wallet.module';
 import { RankingsModule } from './modules/rankings/rankings.module';
 import { RewardsModule } from './modules/rewards/rewards.module';
 import { BannersModule } from './modules/banners/banners.module';
+import { PaymentsModule } from './modules/payments/payments.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { BannersModule } from './modules/banners/banners.module';
     RankingsModule,
     RewardsModule,
     BannersModule,
+    PaymentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

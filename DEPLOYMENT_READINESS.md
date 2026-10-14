@@ -15,6 +15,8 @@ readiness는 읽기만 수행한다. 마이그레이션 누락, 연결 실패, �
 
 ## 반영 순서
 
+2026-10-14 HTTP 설정 추가: 배포 전에 실제 고객 웹·관리자 웹의 정확한 출처를 `CORS_ALLOWED_ORIGINS`에 지정한다. 미설정 시 다른 출처의 브라우저는 응답을 읽을 수 없다. 운영 환경의 `/docs`·OpenAPI JSON/YAML은 비공개이며, 개발 문서는 명시적으로 켜야 한다. [HTTP 보안 설정](docs/HTTP_SECURITY.ko.md)을 확인한다. 최신 DB 적용·시작 절차는 [승인된 마이그레이션 실행](docs/GUARDED_DEPLOYMENT.ko.md)과 [시작 게이트](docs/STARTUP_GATE.ko.md)를 우선한다.
+
 1. PR 최신 커밋의 verify / postgres 검사를 확인한다. 해당 커밋을 별도 테스트 서버와 DB에 먼저 적용한다.
 2. 대상 DB와 기존 백업·복원 가능 여부를 확인한다. 기존 GP/상품/주문 기록을 보존한다. 새 DB를 기존 DB 대신 연결하거나 테스트 시드를 운영 DB에 실행하지 않는다.
 3. 빌드 환경에서 `npm ci --include=dev` 및 `npm run build`를 실행한다. 설치 버전은 잠금 파일을 따른다.

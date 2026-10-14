@@ -60,6 +60,7 @@ async function main() {
     DB_HOST: '127.0.0.1', DB_PORT: String(local.port), DB_USERNAME: 'gacha_ci',
     DB_PASSWORD: 'local-ci-only', DB_DATABASE: database, PORT: String(await freePort()),
     JWT_SECRET: jwtSecret, ENABLE_LEGACY_TRANSACTIONS: 'false',
+    CORS_ALLOWED_ORIGINS: 'https://admin.example.invalid', ENABLE_API_DOCS: 'true',
     ENABLE_GP_ORDER_PREVIEW: 'true', ENABLE_SHIPPING_PREVIEW: 'true',
     ENABLE_GP_CONVERSION_PREVIEW: 'true', ENABLE_ORDER_REFUND_PREVIEW: 'true',
     ENABLE_DANAL_TEST_PAYMENTS: 'true', ENABLE_OPERATIONS_PREVIEW: 'true' });
@@ -183,6 +184,26 @@ async function main() {
     assert.equal((await ready(server,env)).body.data.status,'ready');
     assert.equal((await request(env,'/health')).body.data.status,'ok');
     pass('real_compiled_app_starts_and_reports_database_ready');
+    const origin = 'http://127.0.0.1:' + env.PORT;
+    const trusted = await fetch(origin + '/health', {
+      headers: { Origin: 'https://admin.example.invalid' }, signal: AbortSignal.timeout(3000),
+    });
+    assert.equal(trusted.status, 200);
+    assert.equal(trusted.headers.get('access-control-allow-origin'), 'https://admin.example.invalid');
+    assert.equal(trusted.headers.get('access-control-allow-credentials'), null);
+    assert(trusted.headers.get('content-security-policy').includes("script-src 'self';"));
+    await trusted.arrayBuffer();
+    const untrusted = await fetch(origin + '/health', {
+      headers: { Origin: 'https://admin.example.invalid.attacker.invalid' }, signal: AbortSignal.timeout(3000),
+    });
+    assert.equal(untrusted.headers.get('access-control-allow-origin'), null);
+    await untrusted.arrayBuffer();
+    for (const route of ['/docs', '/docs-json', '/docs-yaml']) {
+      const hidden = await fetch(origin + route, { signal: AbortSignal.timeout(3000) });
+      assert.equal(hidden.status, 404);
+      await hidden.arrayBuffer();
+    }
+    pass('compiled_production_cors_csp_and_disabled_swagger_hold');
     const token = tokenFor(user.id,jwtSecret);
     assert.equal((await request(env,'/capsules')).status,401);
     assert.equal((await request(env,'/owner/capabilities')).status,401);

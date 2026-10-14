@@ -10,6 +10,9 @@ import {
   ShippingRequest,
   ShippingRequestItem,
   WalletTransaction,
+  CapsuleOrder,
+  OwnedCapsule,
+  CapsuleOpening,
 } from '../entities';
 
 const entities = [
@@ -22,6 +25,9 @@ const entities = [
   ShippingRequest,
   ShippingRequestItem,
   WalletTransaction,
+  CapsuleOrder,
+  OwnedCapsule,
+  CapsuleOpening,
 ];
 
 export const buildTypeOrmConfig = (
@@ -35,10 +41,8 @@ export const buildTypeOrmConfig = (
   database: configService.get<string>('DB_DATABASE'),
   entities,
   migrations: [__dirname + '/../database/migrations/*{.ts,.js}'],
-  // NOTE: synchronize is controlled by NODE_ENV — see below.
-  // In production (NODE_ENV=production) we rely on migrations instead of
-  // auto-sync to avoid unintended/unsafe schema changes against live data.
-  synchronize: configService.get<string>('NODE_ENV') !== 'production',
+  // All environments use explicit migrations; startup never changes schema.
+  synchronize: false,
   logging: false,
 });
 

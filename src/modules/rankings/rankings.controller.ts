@@ -1,4 +1,10 @@
-import { Controller, Get, Query, DefaultValuePipe, ParseIntPipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Query,
+  DefaultValuePipe,
+  ParseIntPipe,
+} from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { RankingsService } from './rankings.service';
 
@@ -10,7 +16,8 @@ export class RankingsController {
   @Get('users')
   @ApiOperation({
     summary: '유저 랭킹 (명예의 전당)',
-    description: '누적 획득가치(estimatedValue 합) 기준 유저 랭킹 Top N을 반환합니다.',
+    description:
+      '누적 획득가치(estimatedValue 합) 기준 유저 랭킹 Top N을 반환합니다.',
   })
   getUserRanking(
     @Query('limit', new DefaultValuePipe(50), ParseIntPipe) limit: number,
@@ -21,7 +28,7 @@ export class RankingsController {
   @Get('gachas')
   @ApiOperation({
     summary: '인기 랜덤박스 랭킹',
-    description: '전체 기간 뽑기 횟수 기준 인기 랜덤박스 Top N을 반환합니다.',
+    description: '확정 개봉 횟수 기준 인기 랜덤박스 Top N을 반환합니다.',
   })
   getPopularGachas(
     @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
@@ -31,7 +38,7 @@ export class RankingsController {
 
   @Get('wins')
   @ApiOperation({
-    summary: '실시간 당첨 피드',
+    summary: '최근 확정 개봉 피드',
     description: '최근 당첨 내역(닉네임 마스킹 처리)을 최신순으로 반환합니다.',
   })
   getRecentBigWins(

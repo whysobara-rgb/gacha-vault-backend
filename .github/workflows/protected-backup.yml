@@ -1,0 +1,56 @@
+name: Protected backup (synthetic only)
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: protected-backup-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  encrypted-export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: gacha_ci
+          POSTGRES_PASSWORD: local-ci-only
+          POSTGRES_DB: gacha_integration_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U gacha_ci -d gacha_integration_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Install age from Ubuntu repository
+        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends age
+      - run: node --check tools/release/protected-backup.cjs && node --check tools/release/backup-rehearsal.cjs
+      - run: npm run build
+      - name: Encrypted export and isolated restore
+        run: node tools/release/backup-rehearsal.cjs
+        env:
+          CI: 'true'
+          NODE_ENV: test
+          TEST_POSTGRES: 'true'
+          REHEARSAL_PG_CONTAINER: ${{ job.services.postgres.id }}
+      - name: Publish synthetic report only (never backup files or keys)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: protected-backup-report
+          path: backup-rehearsal-results/report.json
+          retention-days: 14
+          if-no-files-found: warn

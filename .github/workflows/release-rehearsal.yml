@@ -1,0 +1,97 @@
+name: Release rehearsal (synthetic only)
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: release-rehearsal-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  isolated-rehearsal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: gacha_ci
+          POSTGRES_PASSWORD: local-ci-only
+          POSTGRES_DB: gacha_integration_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U gacha_ci -d gacha_integration_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Check rehearsal guard and JavaScript syntax
+        run: |
+          node --check tools/release/rehearsal.cjs
+          node --check tools/release/payment-regression.cjs
+          node --check tools/release/start.cjs
+          node --check tools/release/startup-rehearsal.cjs
+          node tools/release/rehearsal.cjs --self-test
+      - run: npm run build
+      - run: npm run check:types
+      - name: Existing integration tests on PostgreSQL 18
+        run: |
+          mkdir -p rehearsal-results
+          npm run test:postgres -- --json --outputFile=rehearsal-results/postgres-integration.json
+        env:
+          NODE_ENV: test
+          TEST_POSTGRES: 'true'
+      - name: Prove payment expiry failures on old code and success on fixed code
+        run: node tools/release/payment-regression.cjs
+        env:
+          NODE_ENV: test
+          TEST_POSTGRES: 'true'
+          CI_REHEARSAL: 'true'
+      - name: Synthetic dump restore upgrade and fifty-client HTTP rehearsal
+        run: |
+          set -o pipefail
+          mkdir -p rehearsal-results
+          node tools/release/rehearsal.cjs 2>&1 | tee rehearsal-results/execution.log
+        env:
+          NODE_ENV: test
+          TEST_POSTGRES: 'true'
+          CI_REHEARSAL: 'true'
+          REHEARSAL_PG_CONTAINER: ${{ job.services.postgres.id }}
+      - name: Compiled app guarded startup and real HTTP checks
+        run: node tools/release/startup-rehearsal.cjs
+        env:
+          NODE_ENV: test
+          TEST_POSTGRES: 'true'
+          CI_REHEARSAL: 'true'
+          REHEARSAL_PG_CONTAINER: ${{ job.services.postgres.id }}
+      - name: Publish non-sensitive rehearsal evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: synthetic-release-rehearsal
+          path: rehearsal-results/
+          retention-days: 14
+          if-no-files-found: warn
+      - name: Summarize scope
+        if: always()
+        run: |
+          echo '## Synthetic release rehearsal' >> "$GITHUB_STEP_SUMMARY"
+          echo 'This job does not connect to Render or any external PG. Data is generated locally. Passing does not mean a live DB backup, deployment, or production launch was completed.' >> "$GITHUB_STEP_SUMMARY"
+          for report in rehearsal-results/report.json rehearsal-results/payment-regression.json rehearsal-results/startup-report.json; do
+            if [ -f "$report" ]; then
+              echo '```json' >> "$GITHUB_STEP_SUMMARY"
+              cat "$report" >> "$GITHUB_STEP_SUMMARY"
+              echo '```' >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done

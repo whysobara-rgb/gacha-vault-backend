@@ -22,6 +22,9 @@ export class User {
   @PrimaryGeneratedColumn()
   id: number;
 
+  @Column({ name: 'auth_version', type: 'integer', default: 0 })
+  authVersion: number;
+
   @Column({ type: 'varchar', length: 255, unique: true })
   email: string;
 

@@ -16,6 +16,17 @@ export enum CurrencyType {
 
 @Entity('gachas')
 export class Gacha {
+  @Column({ type: 'varchar', length: 16, default: 'other' }) category: string;
+  @Column({
+    name: 'sale_type',
+    type: 'varchar',
+    length: 16,
+    default: 'UNSPECIFIED',
+  })
+  saleType: string;
+  @Column({ name: 'cash_enabled', default: false }) cashEnabled: boolean;
+  @Column({ name: 'cash_unit_price', type: 'integer', nullable: true })
+  cashUnitPrice: number | null;
   @PrimaryGeneratedColumn()
   id: number;
 

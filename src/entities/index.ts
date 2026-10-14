@@ -7,3 +7,6 @@ export * from './inventory-item.entity';
 export * from './shipping-request.entity';
 export * from './shipping-request-item.entity';
 export * from './wallet-transaction.entity';
+export * from './capsule-order.entity';
+export * from './owned-capsule.entity';
+export * from './capsule-opening.entity';
